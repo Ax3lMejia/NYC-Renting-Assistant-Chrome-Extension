@@ -6,7 +6,12 @@ import { ViolationSummary } from './components/features/ViolationSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
 
-const App: React.FC = () => {
+
+type AppProps = {
+  scrapedAddress: string | null;
+};
+
+function App({ scrapedAddress }: AppProps) {
   const [isOpen, setIsOpen] = useState(true);
 
   // hardcode address for now until FR1 (Content Script Address detection) is built
