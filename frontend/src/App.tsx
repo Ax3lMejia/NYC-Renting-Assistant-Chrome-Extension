@@ -1,33 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { AddressTracker } from './components/features/AddressTracker';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
+import { useExtensionData } from './hooks/useExtensionData';
 
 const App: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const [address, setAddress] = useState<string | null>(null);
-  const [complaints, setComplaints] = useState<number>(0);
-  const [violations, setViolations] = useState<number>(0);
+  // hardcode address for now until FR1 (Content Script Address detection) is built
+  const [address, setAddress] = useState<string | null>("123 Example St, Brooklyn, NY 11201");
+  const { data, isLoading, error } = useExtensionData(address);
 
   const [settings, setSettings] = useState({
     showComplaints: true,
     showViolations: true,
     showRentEstimate: true,
   });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAddress("123 Example St, Brooklyn, NY 11201");
-      setComplaints(14);
-      setViolations(8);
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleToggle = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -39,17 +29,23 @@ const App: React.FC = () => {
 
       {settings.showComplaints && (
         <ComplaintSummary
-          complaints={complaints}
-          severity="medium"
+          complaints={data?.complaints ?? null}
+          severity={data?.complaintSeverity ?? null}
           isLoading={isLoading}
         />
       )}
 
       {settings.showViolations && (
         <ViolationSummary
-          violations={violations}
+          violations={data?.violations ?? null}
           isLoading={isLoading}
         />
+      )}
+
+      {error && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-sm">
+          {error}
+        </div>
       )}
 
       <SettingsPanel settings={settings} onToggle={handleToggle} />
