@@ -3,17 +3,14 @@ import { RateLimiter } from './rateLimiter';
 
 const NYC_OPEN_DATA_DOMAIN = 'data.cityofnewyork.us';
 
-// Socrata APIs (SoQL) endpoints
+// socrata APIs (SoQL) endpoints
 const ENDPOINTS = {
   hpdViolations: 'https://data.cityofnewyork.us/resource/wvxf-7kdb.json',
-  complaints311: 'https://data.cityofnewyork.us/resource/erm2-nwe9.json'
 };
 
 export class ApiClient {
-  /**
-   * cleans the address to try to match NYC Open Data format.
-   * e.g. "123 Example St, Brooklyn, NY 11201" -> "123 EXAMPLE STREET"
-   */
+  // cleans the address to try to match NYC Open Data format.
+  // for example "123 Example St, Brooklyn, NY 11201" -> "123 EXAMPLE STREET"
   private static parseAddress(addressString: string): { houseNumber: string, streetName: string, zip?: string } | null {
     // very basic regex to pull the leading number and string before a comma or newline
     const match = addressString.match(/^(\d+(?:-\d+)?)\s+([^,]+)/i);
@@ -41,7 +38,7 @@ export class ApiClient {
       complaints: null,
       complaintSeverity: null,
       violations: null,
-      rentEstimate: null, // Placeholder for future rent comparison API
+      rentEstimate: null, // placeholder for future rent comparison API
       lastUpdated: Date.now()
     };
 
@@ -52,27 +49,21 @@ export class ApiClient {
 
     const { houseNumber, streetName } = parsedAddress;
 
-    // SoQL Queries
+    // SoQL queries
+    // HPD Violations API query for open violations at this address
     const hpdQuery = `?housenumber=${encodeURIComponent(houseNumber)}&streetname=${encodeURIComponent(streetName)}&$where=violationstatus='Open'&$select=count(*)`;
-    const complaintsQuery = `?incident_address=${encodeURIComponent(`${houseNumber} ${streetName}`)}&$where=created_date > '${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}'&$select=count(*)`;
 
     try {
-      const [hpdRes, complaintsRes] = await Promise.allSettled([
-        RateLimiter.enqueue(NYC_OPEN_DATA_DOMAIN, () => this.fetchJson(`${ENDPOINTS.hpdViolations}${hpdQuery}`)),
-        RateLimiter.enqueue(NYC_OPEN_DATA_DOMAIN, () => this.fetchJson(`${ENDPOINTS.complaints311}${complaintsQuery}`))
+      // handle requests asynchronously using Promise.allSettled
+      // currently only fetching HPD Violations API, will research more relevant APIs later
+      const [hpdRes] = await Promise.allSettled([
+        RateLimiter.enqueue(NYC_OPEN_DATA_DOMAIN, () => this.fetchJson(`${ENDPOINTS.hpdViolations}${hpdQuery}`))
       ]);
 
       if (hpdRes.status === 'fulfilled') {
         result.violations = parseInt(hpdRes.value[0]?.count || '0', 10);
       } else {
         errors.push({ source: 'HPD Violations API', message: hpdRes.reason?.message || 'Failed to fetch HPD data' });
-      }
-
-      if (complaintsRes.status === 'fulfilled') {
-        result.complaints = parseInt(complaintsRes.value[0]?.count || '0', 10);
-        result.complaintSeverity = this.calculateSeverity(result.complaints);
-      } else {
-        errors.push({ source: 'NYC 311 API', message: complaintsRes.reason?.message || 'Failed to fetch 311 data' });
       }
 
     } catch (err: any) {
@@ -99,6 +90,7 @@ export class ApiClient {
     return response.json();
   }
 
+  // calculate severity for when we add complaints back in the future
   private static calculateSeverity(complaints: number): 'low' | 'medium' | 'high' {
     if (complaints < 5) return 'low';
     if (complaints < 15) return 'medium';
