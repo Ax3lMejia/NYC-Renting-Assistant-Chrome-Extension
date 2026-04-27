@@ -14,8 +14,7 @@ type AppProps = {
 function App({ scrapedAddress }: AppProps) {
   const [isOpen, setIsOpen] = useState(true);
 
-  // hardcode address for now until FR1 (Content Script Address detection) is built
-  const [address, setAddress] = useState<string | null>("123 Example St, Brooklyn, NY 11201");
+  const address = scrapedAddress;
   const { data, isLoading, error } = useExtensionData(address);
 
   const [settings, setSettings] = useState({

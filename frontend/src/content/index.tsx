@@ -64,19 +64,39 @@ function renderApp() {
 }
 
 function watchForPageChanges() {
-  const observer = new MutationObserver(() => {
-    if (window.location.href !== currentUrl) {
-      currentUrl = window.location.href;
-      setTimeout(() => {
-        renderApp();
-      }, 300);
+  let debounceTimeout: any = null;
+
+  const checkAndUpdate = () => {
+    const newAddress = detectAddress();
+    if (newAddress !== currentAddress) {
+      currentAddress = newAddress;
+      if (root) {
+        root.render(
+          <React.StrictMode>
+            <App scrapedAddress={currentAddress} />
+          </React.StrictMode>
+        );
+      }
     }
+  };
+
+  const observer = new MutationObserver(() => {
+    if (debounceTimeout) clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(checkAndUpdate, 500);
   });
 
   observer.observe(document.body, {
     childList: true,
     subtree: true,
   });
+
+  // fallback polling for SPA routing
+  setInterval(() => {
+    if (window.location.href !== currentUrl) {
+      currentUrl = window.location.href;
+      checkAndUpdate();
+    }
+  }, 1000);
 }
 
 const supportedDomains = ['zillow.com', 'streeteasy.com', 'apartments.com'];
