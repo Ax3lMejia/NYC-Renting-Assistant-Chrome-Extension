@@ -34,11 +34,13 @@ function init() {
   container.style.top = '20px';
   container.style.right = '20px';
   container.style.zIndex = '999999';
+  container.style.pointerEvents = 'none';
 
   const shadowRoot = container.attachShadow({ mode: 'open' });
   const shadowWrapper = document.createElement('div');
   shadowWrapper.id = 'shadow-wrapper';
   shadowWrapper.className = 'nyc-raw-wrapper';
+  shadowWrapper.style.pointerEvents = 'none';
   shadowRoot.appendChild(shadowWrapper);
 
   const styleElement = document.createElement('style');

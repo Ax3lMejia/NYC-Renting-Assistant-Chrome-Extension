@@ -11,7 +11,9 @@
     "https://*.zillow.com/*",
     "https://*.streeteasy.com/*",
     "https://*.apartments.com/*",
-    "https://data.cityofnewyork.us/*"
+    "https://data.cityofnewyork.us/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ],
   "action": {
     "default_popup": "index.html"

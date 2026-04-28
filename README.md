@@ -16,7 +16,8 @@ The collected information is displayed in a sidebar panel alongside the listing,
 
 ## Architecture
 * **Content Script:** A thin client that performs DOM reads and UI writes. It forwards data requests to the background service worker via Chrome runtime messaging.
-* **Background Service Worker:** Acts as the API and cache layer. It handles rate limit management and caching, preventing IP level bans from NYC open data portals.
+* **Background Service Worker:** Proxies requests from the content script to the backend and caches usable responses in Chrome storage.
+* **Local Backend:** A small Node service on `http://127.0.0.1:8787` that normalizes addresses, queries live NYC Open Data endpoints, rate-limits outbound requests, and returns a single building insights payload.
 * **Local Storage:** Utilizes Chrome Local Storage for caching and saving user preferences, ensuring no user data is transmitted to third parties.
 * **Manifest V3:** Built using Manifest V3 standards with an event driven service worker.
 
@@ -43,14 +44,25 @@ The collected information is displayed in a sidebar panel alongside the listing,
    ```
 
 ### Development
-To run the extension in development mode with hot module replacement:
+Start the local backend first:
 ```bash
+cd backend
+node server.mjs
+```
+
+Then run the extension in development mode with hot module replacement:
+```bash
+cd frontend
 npm run dev
 ```
 Then, load the unpacked extension in Chrome:
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" in the top right corner.
 3. Click "Load unpacked" and select the `frontend/dist` directory.
+
+The backend exposes:
+* `GET /health`
+* `POST /api/building-insights` with JSON body `{ "address": "251 East 32nd Street" }`
 
 ### Building for Production
 To build the extension for production:

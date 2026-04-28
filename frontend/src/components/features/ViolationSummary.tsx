@@ -34,14 +34,20 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
             </div>
             <div className="flex items-center justify-between">
               <Text weight="medium">DOB Violations</Text>
-              <Badge variant={dobViolations && dobViolations > 5 ? 'error' : 'warning'}>
-                {dobViolations ?? 0}
-              </Badge>
+              {dobViolations === null ? (
+                <Text size="sm" className="text-primary-400 italic">
+                  Not connected yet
+                </Text>
+              ) : (
+                <Badge variant={dobViolations > 5 ? 'error' : 'warning'}>
+                  {dobViolations}
+                </Badge>
+              )}
             </div>
             <div className="flex items-start space-x-2 p-3 bg-primary-50 rounded-lg border border-primary-100">
               <Info className="h-4 w-4 text-primary-600 mt-0.5 shrink-0" />
               <Text size="xs" className="text-primary-600 italic leading-snug">
-                HPD violations cover maintenance code infractions. DOB violations are issued by the Department of Buildings for structural and safety issues.
+                HPD open violations are live. DOB violations will stay blank until we add that dataset to the backend.
               </Text>
             </div>
           </div>

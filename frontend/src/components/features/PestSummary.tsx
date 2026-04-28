@@ -60,7 +60,7 @@ export const PestSummary: React.FC<PestSummaryProps> = ({
               <div className="flex items-start space-x-2 p-3 bg-primary-50 rounded-lg border border-primary-100">
                 <AlertCircle className="h-4 w-4 text-primary-400 mt-0.5 shrink-0" />
                 <Text size="xs" className="text-primary-500 italic leading-snug">
-                  No pest data available for this address.
+                  Pest datasets are not connected in the backend yet.
                 </Text>
               </div>
             )}

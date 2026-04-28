@@ -1,9 +1,8 @@
 import React from 'react';
-import { MessageSquareWarning, ExternalLink } from 'lucide-react';
+import { MessageSquareWarning } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Heading, Text } from '../ui/Typography';
 import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
 
 interface ComplaintSummaryProps {
   complaints: number | null;
@@ -50,12 +49,8 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
               <Text size="sm" className="text-primary-500">Active/Recent Complaints</Text>
             </div>
             <Text size="sm" className="leading-relaxed">
-              Based on HPD housing complaints aggregated via Augrented.
+              Live NYC 311 complaint counts for the detected building address.
             </Text>
-            <Button variant="outline" size="sm" className="w-full text-xs h-9">
-              <ExternalLink className="mr-2 h-3 w-3" />
-              View on Augrented
-            </Button>
           </>
         )}
       </CardContent>

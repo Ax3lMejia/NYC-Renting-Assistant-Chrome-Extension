@@ -19,7 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, children }) =
       {!isOpen && !isPopup && (
         <button
           onClick={onClose}
-          className="fixed top-24 right-0 z-[9999] bg-primary-900 text-white p-3 rounded-l-2xl shadow-floating hover:bg-primary-800 transition-all active:scale-95 group border-y border-l border-primary-700"
+          className="fixed top-24 right-0 z-[9999] pointer-events-auto bg-primary-900 text-white p-3 rounded-l-2xl shadow-floating hover:bg-primary-800 transition-all active:scale-95 group border-y border-l border-primary-700"
         >
           <div className="flex items-center space-x-2">
             <ChevronRight className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
@@ -30,10 +30,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, children }) =
 
       <div
         className={cn(
-          "z-[9999] w-full flex flex-col transition-all duration-300 ease-in-out",
-          !isPopup && "fixed top-4 right-4 bottom-4 w-85 bg-white/95 backdrop-blur-md rounded-3xl shadow-floating border border-primary-100 origin-right",
+          "z-[9999] flex flex-col transition-all duration-300 ease-in-out",
+          !isPopup && "fixed top-4 right-4 bottom-4 w-85 max-w-[calc(100vw-2rem)] pointer-events-auto bg-white/95 backdrop-blur-md rounded-3xl shadow-floating border border-primary-100 origin-right",
           !isPopup && (isOpen ? "translate-x-0 opacity-100 scale-100" : "translate-x-full opacity-0 scale-95 pointer-events-none"),
-          isPopup && "min-h-screen bg-white"
+          isPopup && "min-h-screen pointer-events-auto bg-white"
         )}
       >
 
