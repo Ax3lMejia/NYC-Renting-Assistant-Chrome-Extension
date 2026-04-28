@@ -1,23 +1,18 @@
 import { BuildingData, ApiError } from '../types/api';
 import { RateLimiter } from './rateLimiter';
 
-const GEOCLIENT_DOMAIN = 'api.nyc.gov';
-const AUGRENTED_DOMAIN = 'augrented.com';
+const NYC_OPEN_DATA_DOMAIN = 'data.cityofnewyork.us';
 
 const ENDPOINTS = {
-  geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
-  augrentedSearch: 'https://augrented.com/api/nyc/nyc/building/search',
+  hpdViolations: 'https://data.cityofnewyork.us/resource/wvxf-7kdb.json',
+  complaints311: 'https://data.cityofnewyork.us/resource/erm2-nwe9.json',
 };
 
 export class ApiClient {
-  // Parses a full address string into components for the Geoclient V2 address endpoint.
-  // Input:  "441 63rd St APT 1R, Brooklyn, NY 11220"
-  // Output: { houseNumber: "441", street: "63rd St", borough: "Brooklyn", zip: "11220" }
+  // Parses a full address string into the house number and street name expected by NYC Open Data.
   private static parseAddressComponents(address: string): {
     houseNumber: string;
     street: string;
-    zip?: string;
-    borough?: string;
   } | null {
     const stripped = address
       .replace(/,?\s*(apt\.?|apartment|unit|#|ste\.?|suite|fl\.?|floor)\s*[^,]*/gi, '')
@@ -34,58 +29,28 @@ export class ApiClient {
     const houseNumber = streetMatch[1].trim();
     const street = streetMatch[2].trim();
 
-    // Zip is anywhere in the remaining parts
-    let zip: string | undefined;
-    let borough: string | undefined;
-
-    for (let i = 1; i < parts.length; i++) {
-      const zipMatch = parts[i].match(/\b(\d{5})\b/);
-      if (zipMatch) {
-        zip = zipMatch[1];
-      } else if (!borough) {
-        // first non-zip part after the street is the borough/city
-        borough = parts[i].replace(/\b[A-Z]{2}\b/i, '').trim();
-      }
-    }
-
     if (import.meta.env.DEV) {
-      console.log('[Geoclient parse]', { houseNumber, street, borough, zip });
+      console.log('[Address parse]', { houseNumber, street });
     }
 
-    return { houseNumber, street, borough, zip };
+    return { houseNumber, street };
   }
 
-  // Resolves a street address to a NYC BBL and BIN using the NYC Geoclient V2 API.
-  private static async geocodeAddress(address: string): Promise<{ bbl: string; bin: string } | null> {
-    const components = this.parseAddressComponents(address);
-    if (!components) return null;
+  private static async fetchCount(url: string): Promise<number> {
+    const data = await RateLimiter.enqueue(NYC_OPEN_DATA_DOMAIN, () => this.fetchJson(url));
+    const rawCount = Array.isArray(data) ? data[0]?.count : null;
+    const count = Number(rawCount);
 
-    const apiKey = import.meta.env.VITE_NYC_OPENDATA_API_KEY;
-
-    const params = new URLSearchParams({
-      houseNumber: components.houseNumber,
-      street: components.street,
-      ...(components.zip && { zip: components.zip }),
-      ...(components.borough && !components.zip && { borough: components.borough }),
-    });
-
-    const url = `${ENDPOINTS.geoclientAddress}?${params}`;
-
-    try {
-      const data = await RateLimiter.enqueue(GEOCLIENT_DOMAIN, () =>
-        this.fetchJson(url, apiKey ? { 'Ocp-Apim-Subscription-Key': apiKey } : {})
-      );
-      const bbl = data?.address?.bbl;
-      const bin = data?.address?.buildingIdentificationNumber ?? data?.address?.bin;
-      if (!bbl) return null;
-      return { bbl: String(bbl), bin: bin ? String(bin) : String(bbl) };
-    } catch {
-      return null;
+    if (!Number.isFinite(count)) {
+      throw new Error('Unexpected count response from NYC Open Data.');
     }
+
+    return count;
   }
 
   static async fetchBuildingData(address: string): Promise<{ data: BuildingData; errors: ApiError[] }> {
     const errors: ApiError[] = [];
+    const components = this.parseAddressComponents(address);
 
     const result: BuildingData = {
       address,
@@ -101,57 +66,41 @@ export class ApiClient {
       lastUpdated: Date.now(),
     };
 
-    const geocoded = await this.geocodeAddress(address);
-    if (!geocoded) {
-      errors.push({ source: 'Geoclient', message: 'Could not resolve address to a NYC building (BBL not found).' });
+    if (!components) {
+      errors.push({ source: 'Address Parser', message: 'Could not parse the address into house number and street name.' });
       return { data: result, errors };
     }
 
-    result.bbl = geocoded.bbl;
-
-    const params = new URLSearchParams({
-      bbl: geocoded.bbl,
-      bin: geocoded.bin,
-      include_housing_complaints: 'true',
-      include_housing_violations: 'true',
-      include_dob_violations: 'true',
-      include_bedbug_reports: 'true',
-      include_rodent_inspections: 'true',
-      limit_per_category: '100',
+    const hpdParams = new URLSearchParams({
+      housenumber: components.houseNumber,
+      streetname: components.street,
+      '$where': "violationstatus='Open'",
+      '$select': 'count(*)',
     });
 
-    try {
-      const data = await RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
-        this.fetchJson(`${ENDPOINTS.augrentedSearch}?${params}`)
-      );
+    const complaintsParams = new URLSearchParams({
+      incident_address: `${components.houseNumber} ${components.street}`,
+      '$select': 'count(*)',
+    });
 
-      if (Array.isArray(data.housing_complaints)) {
-        const count = data.housing_complaints.length;
-        result.complaints = count;
-        result.complaintSeverity = this.calculateSeverity(count);
-      }
+    const [violationsResult, complaintsResult] = await Promise.allSettled([
+      this.fetchCount(`${ENDPOINTS.hpdViolations}?${hpdParams}`),
+      this.fetchCount(`${ENDPOINTS.complaints311}?${complaintsParams}`),
+    ]);
 
-      if (Array.isArray(data.housing_violations)) {
-        result.violations = data.housing_violations.length;
-      }
+    if (violationsResult.status === 'fulfilled') {
+      result.violations = violationsResult.value;
+    } else {
+      const reason = violationsResult.reason as Error;
+      errors.push({ source: 'HPD Open Violations', message: reason.message || 'Failed to fetch HPD violations.' });
+    }
 
-      if (Array.isArray(data.dob_violations)) {
-        result.dobViolations = data.dob_violations.length;
-      }
-
-      if (Array.isArray(data.bedbug_reports)) {
-        result.bedbugReports = data.bedbug_reports.length;
-      }
-
-      if (Array.isArray(data.rodent_inspections)) {
-        result.rodentInspections = data.rodent_inspections.length;
-        result.rodentFailures = data.rodent_inspections.filter(
-          (r: any) => typeof r.result === 'string' && r.result.toUpperCase().includes('FAIL')
-        ).length;
-      }
-
-    } catch (err: any) {
-      errors.push({ source: 'Augrented API', message: err.message || 'Failed to fetch building data.' });
+    if (complaintsResult.status === 'fulfilled') {
+      result.complaints = complaintsResult.value;
+      result.complaintSeverity = this.calculateSeverity(complaintsResult.value);
+    } else {
+      const reason = complaintsResult.reason as Error;
+      errors.push({ source: '311 Complaints', message: reason.message || 'Failed to fetch 311 complaints.' });
     }
 
     return { data: result, errors };

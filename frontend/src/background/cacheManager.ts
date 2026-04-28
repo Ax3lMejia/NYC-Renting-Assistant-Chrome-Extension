@@ -4,6 +4,14 @@ const CACHE_PREFIX = 'NYC_RA_CACHE_';
 const CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export class CacheManager {
+  private static hasUsableData(data: BuildingData): boolean {
+    return data.complaints !== null ||
+      data.violations !== null ||
+      data.dobViolations !== null ||
+      data.bedbugReports !== null ||
+      data.rodentInspections !== null;
+  }
+
   private static getCacheKey(address: string): string {
     // normalize address for cache key
     const normalized = address.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -26,7 +34,13 @@ export class CacheManager {
       return null;
     }
 
-    return data as BuildingData;
+    const cachedData = data as BuildingData;
+    if (!this.hasUsableData(cachedData)) {
+      await this.remove(address);
+      return null;
+    }
+
+    return cachedData;
   }
 
   static async set(address: string, data: BuildingData): Promise<void> {

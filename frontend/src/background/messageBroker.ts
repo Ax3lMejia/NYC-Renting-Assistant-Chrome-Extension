@@ -3,6 +3,13 @@ import { CacheManager } from './cacheManager';
 import { ApiClient } from './apiClient';
 
 export class MessageBroker {
+  private static hasUsableData(data: ExtensionResponse['data']): boolean {
+    if (!data) return false;
+
+    return data.complaints !== null || data.violations !== null ||
+      data.dobViolations !== null || data.bedbugReports !== null || data.rodentInspections !== null;
+  }
+
   static init() {
     chrome.runtime.onMessage.addListener((
       request: ExtensionMessage,
@@ -34,9 +41,10 @@ export class MessageBroker {
       // 2. fetch from apis
       const { data, errors } = await ApiClient.fetchBuildingData(address);
 
-      // 3. store in cache (even if partial data, to prevent hammering failing apis)
-      // only cache if we at least got some data back, or if we want to cache negative results too
-      await CacheManager.set(address, data);
+      // 3. cache only usable responses so stale empty/error payloads do not stick around
+      if (this.hasUsableData(data)) {
+        await CacheManager.set(address, data);
+      }
 
       // 4. return result
       if (errors.length > 0) {

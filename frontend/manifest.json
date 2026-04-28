@@ -11,8 +11,7 @@
     "https://*.zillow.com/*",
     "https://*.streeteasy.com/*",
     "https://*.apartments.com/*",
-    "https://api.nyc.gov/*",
-    "https://augrented.com/*"
+    "https://data.cityofnewyork.us/*"
   ],
   "action": {
     "default_popup": "index.html"

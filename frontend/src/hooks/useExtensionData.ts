@@ -8,7 +8,9 @@ export function useExtensionData(address: string | null) {
 
   useEffect(() => {
     if (!address) {
-      setIsLoading(true);
+      setData(null);
+      setError('Could not detect the listing address on this page.');
+      setIsLoading(false);
       return;
     }
 
