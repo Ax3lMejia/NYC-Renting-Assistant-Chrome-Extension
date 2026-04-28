@@ -39,5 +39,8 @@ function extractAddressFromText(text: string): string | null {
 }
 
 function cleanAddress(raw: string): string {
-  return raw.replace(/\s+/g, ' ').trim();
+  return raw
+    .replace(/\s*[|\-–—]\s*(Zillow|StreetEasy|Apartments\.com|Trulia).*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
