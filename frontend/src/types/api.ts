@@ -1,8 +1,13 @@
 export interface BuildingData {
   address: string;
+  bbl: string | null;
   complaints: number | null;
   complaintSeverity: 'low' | 'medium' | 'high' | null;
   violations: number | null;
+  dobViolations: number | null;
+  bedbugReports: number | null;
+  rodentInspections: number | null;
+  rodentFailures: number | null;
   rentEstimate: number | null;
   lastUpdated: number;
 }

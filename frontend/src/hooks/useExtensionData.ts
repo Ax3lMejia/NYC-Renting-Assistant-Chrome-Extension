@@ -26,9 +26,14 @@ export function useExtensionData(address: string | null) {
       setTimeout(() => {
         setData({
           address,
+          bbl: '1008370001',
           complaints: 14,
           complaintSeverity: 'medium',
           violations: 8,
+          dobViolations: 3,
+          bedbugReports: 1,
+          rodentInspections: 5,
+          rodentFailures: 2,
           rentEstimate: null,
           lastUpdated: Date.now()
         });
