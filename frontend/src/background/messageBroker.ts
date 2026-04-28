@@ -41,8 +41,10 @@ export class MessageBroker {
       // 4. return result
       if (errors.length > 0) {
         console.warn('API Errors encountered:', errors);
+        const hasAnyData = data.complaints !== null || data.violations !== null ||
+          data.dobViolations !== null || data.bedbugReports !== null || data.rodentInspections !== null;
         return {
-          status: data.complaints !== null || data.violations !== null ? 'partial' : 'error',
+          status: hasAnyData ? 'partial' : 'error',
           data,
           errors
         };

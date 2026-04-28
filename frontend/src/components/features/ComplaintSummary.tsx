@@ -50,11 +50,11 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
               <Text size="sm" className="text-primary-500">Active/Recent Complaints</Text>
             </div>
             <Text size="sm" className="leading-relaxed">
-              Based on NYC 311 and HPD service requests filed in the last 12 months.
+              Based on HPD housing complaints aggregated via Augrented.
             </Text>
             <Button variant="outline" size="sm" className="w-full text-xs h-9">
               <ExternalLink className="mr-2 h-3 w-3" />
-              View Original HPD Source
+              View on Augrented
             </Button>
           </>
         )}
