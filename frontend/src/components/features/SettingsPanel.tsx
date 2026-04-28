@@ -8,17 +8,19 @@ interface SettingsPanelProps {
   settings: {
     showComplaints: boolean;
     showViolations: boolean;
+    showPermits: boolean;
     showPestData: boolean;
     showRentEstimate: boolean;
   };
-  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPestData' | 'showRentEstimate') => void;
+  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPermits' | 'showPestData' | 'showRentEstimate') => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onToggle }) => {
   const options = [
-    { key: 'showComplaints', label: 'HPD Complaints', description: 'Show housing complaints filed with HPD.' },
-    { key: 'showViolations', label: 'Building Violations', description: 'Show HPD maintenance and DOB violations.' },
-    { key: 'showPestData', label: 'Pest Activity', description: 'Show bedbug reports and rodent inspection results.' },
+    { key: 'showComplaints', label: 'Complaints', description: 'HPD housing complaints, DOB complaints, and 311 service requests.' },
+    { key: 'showViolations', label: 'Building Violations', description: 'HPD maintenance, DOB structural, and ECB penalty violations.' },
+    { key: 'showPermits', label: 'Permits', description: 'DOB building permits and active construction on file.' },
+    { key: 'showPestData', label: 'Pest Activity', description: 'Bedbug reports and rodent inspection results.' },
     { key: 'showRentEstimate', label: 'Market Rent Comparison', description: 'Compare current price with area averages.' },
   ] as const;
 

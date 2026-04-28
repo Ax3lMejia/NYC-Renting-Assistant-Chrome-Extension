@@ -7,12 +7,16 @@ import { Badge } from '../ui/Badge';
 interface ViolationSummaryProps {
   violations: number | null;
   dobViolations: number | null;
+  ecbViolations: number | null;
+  openEcbViolations: number | null;
   isLoading: boolean;
 }
 
 export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
   violations,
   dobViolations,
+  ecbViolations,
+  openEcbViolations,
   isLoading,
 }) => {
   return (
@@ -23,7 +27,11 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-12 w-full bg-primary-100/50 animate-pulse rounded-lg" />
+          <div className="space-y-2">
+            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
+            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
+            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
+          </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -38,10 +46,21 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
                 {dobViolations ?? 0}
               </Badge>
             </div>
+            <div className="flex items-center justify-between">
+              <Text weight="medium">ECB Penalty Violations</Text>
+              <div className="flex items-center gap-2">
+                {openEcbViolations !== null && openEcbViolations > 0 && (
+                  <Badge variant="error">{openEcbViolations} open</Badge>
+                )}
+                <Badge variant={ecbViolations && ecbViolations > 5 ? 'error' : 'warning'}>
+                  {ecbViolations ?? 0}
+                </Badge>
+              </div>
+            </div>
             <div className="flex items-start space-x-2 p-3 bg-primary-50 rounded-lg border border-primary-100">
               <Info className="h-4 w-4 text-primary-600 mt-0.5 shrink-0" />
               <Text size="xs" className="text-primary-600 italic leading-snug">
-                HPD violations cover maintenance code infractions. DOB violations are issued by the Department of Buildings for structural and safety issues.
+                HPD: maintenance code infractions. DOB: structural/safety issues. ECB: penalty violations with fines issued by the Environmental Control Board.
               </Text>
             </div>
           </div>
