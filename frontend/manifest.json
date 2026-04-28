@@ -3,7 +3,10 @@
   "name": "NYC Renting Assistant",
   "version": "0.1.0",
   "description": "Aggregate building info and complaints for NYC rental listings.",
-  "permissions": ["storage", "activeTab"],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://*.zillow.com/*",
     "https://*.streeteasy.com/*",
@@ -24,13 +27,19 @@
         "https://*.streeteasy.com/*",
         "https://*.apartments.com/*"
       ],
-      "js": ["src/content/index.tsx"]
+      "js": [
+        "src/content/index.tsx"
+      ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

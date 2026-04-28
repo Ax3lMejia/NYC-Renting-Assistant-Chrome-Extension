@@ -8,15 +8,17 @@ interface SettingsPanelProps {
   settings: {
     showComplaints: boolean;
     showViolations: boolean;
+    showPestData: boolean;
     showRentEstimate: boolean;
   };
-  onToggle: (key: 'showComplaints' | 'showViolations' | 'showRentEstimate') => void;
+  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPestData' | 'showRentEstimate') => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onToggle }) => {
   const options = [
-    { key: 'showComplaints', label: '311 & HPD Complaints', description: 'Show building service requests and rodent history.' },
-    { key: 'showViolations', label: 'Maintenance Violations', description: 'Show open HPD code violations and litigation.' },
+    { key: 'showComplaints', label: 'HPD Complaints', description: 'Show housing complaints filed with HPD.' },
+    { key: 'showViolations', label: 'Building Violations', description: 'Show HPD maintenance and DOB violations.' },
+    { key: 'showPestData', label: 'Pest Activity', description: 'Show bedbug reports and rodent inspection results.' },
     { key: 'showRentEstimate', label: 'Market Rent Comparison', description: 'Compare current price with area averages.' },
   ] as const;
 
@@ -44,9 +46,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onToggle
                 {option.description}
               </Text>
             </div>
-            <Toggle 
-              checked={settings[option.key]} 
-              onChange={() => onToggle(option.key)} 
+            <Toggle
+              checked={settings[option.key]}
+              onChange={() => onToggle(option.key)}
               className="bg-primary-800 border-primary-700"
             />
           </div>

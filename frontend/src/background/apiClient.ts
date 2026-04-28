@@ -3,82 +3,112 @@ import { RateLimiter } from './rateLimiter';
 
 const NYC_OPEN_DATA_DOMAIN = 'data.cityofnewyork.us';
 
-// socrata APIs (SoQL) endpoints
 const ENDPOINTS = {
   hpdViolations: 'https://data.cityofnewyork.us/resource/wvxf-7kdb.json',
+  complaints311: 'https://data.cityofnewyork.us/resource/erm2-nwe9.json',
 };
 
 export class ApiClient {
-  // cleans the address to try to match NYC Open Data format.
-  // for example "123 Example St, Brooklyn, NY 11201" -> "123 EXAMPLE STREET"
-  private static parseAddress(addressString: string): { houseNumber: string, streetName: string, zip?: string } | null {
-    // very basic regex to pull the leading number and string before a comma or newline
-    const match = addressString.match(/^(\d+(?:-\d+)?)\s+([^,]+)/i);
-    if (!match) return null;
+  // Parses a full address string into the house number and street name expected by NYC Open Data.
+  private static parseAddressComponents(address: string): {
+    houseNumber: string;
+    street: string;
+  } | null {
+    const stripped = address
+      .replace(/,?\s*(apt\.?|apartment|unit|#|ste\.?|suite|fl\.?|floor)\s*[^,]*/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    let houseNumber = match[1];
-    let streetName = match[2].toUpperCase().trim();
+    // Split on commas: ["441 63rd St", "Brooklyn", "NY 11220"]
+    const parts = stripped.split(',').map(p => p.trim()).filter(Boolean);
 
-    // standardizes some common street abbreviations
-    streetName = streetName.replace(/\bST\b/g, 'STREET')
-      .replace(/\bAVE\b/g, 'AVENUE')
-      .replace(/\bRD\b/g, 'ROAD')
-      .replace(/\bPL\b/g, 'PLACE')
-      .replace(/\bBLVD\b/g, 'BOULEVARD');
+    // First part must be "houseNumber street"
+    const streetMatch = parts[0]?.match(/^(\d+(?:-\d+)?)\s+(.+)/);
+    if (!streetMatch) return null;
 
-    return { houseNumber, streetName };
+    const houseNumber = streetMatch[1].trim();
+    const street = streetMatch[2].trim();
+
+    if (import.meta.env.DEV) {
+      console.log('[Address parse]', { houseNumber, street });
+    }
+
+    return { houseNumber, street };
   }
 
-  static async fetchBuildingData(address: string): Promise<{ data: BuildingData, errors: ApiError[] }> {
-    const parsedAddress = this.parseAddress(address);
+  private static async fetchCount(url: string): Promise<number> {
+    const data = await RateLimiter.enqueue(NYC_OPEN_DATA_DOMAIN, () => this.fetchJson(url));
+    const rawCount = Array.isArray(data) ? data[0]?.count : null;
+    const count = Number(rawCount);
+
+    if (!Number.isFinite(count)) {
+      throw new Error('Unexpected count response from NYC Open Data.');
+    }
+
+    return count;
+  }
+
+  static async fetchBuildingData(address: string): Promise<{ data: BuildingData; errors: ApiError[] }> {
     const errors: ApiError[] = [];
+    const components = this.parseAddressComponents(address);
 
     const result: BuildingData = {
       address,
+      bbl: null,
       complaints: null,
       complaintSeverity: null,
       violations: null,
-      rentEstimate: null, // placeholder for future rent comparison API
-      lastUpdated: Date.now()
+      dobViolations: null,
+      bedbugReports: null,
+      rodentInspections: null,
+      rodentFailures: null,
+      rentEstimate: null,
+      lastUpdated: Date.now(),
     };
 
-    if (!parsedAddress) {
-      errors.push({ source: 'Address Parser', message: 'Could not parse address format for API query.' });
+    if (!components) {
+      errors.push({ source: 'Address Parser', message: 'Could not parse the address into house number and street name.' });
       return { data: result, errors };
     }
 
-    const { houseNumber, streetName } = parsedAddress;
+    const hpdParams = new URLSearchParams({
+      housenumber: components.houseNumber,
+      streetname: components.street,
+      '$where': "violationstatus='Open'",
+      '$select': 'count(*)',
+    });
 
-    // SoQL queries
-    // HPD Violations API query for open violations at this address
-    const hpdQuery = `?housenumber=${encodeURIComponent(houseNumber)}&streetname=${encodeURIComponent(streetName)}&$where=violationstatus='Open'&$select=count(*)`;
+    const complaintsParams = new URLSearchParams({
+      incident_address: `${components.houseNumber} ${components.street}`,
+      '$select': 'count(*)',
+    });
 
-    try {
-      // handle requests asynchronously using Promise.allSettled
-      // currently only fetching HPD Violations API, will research more relevant APIs later
-      const [hpdRes] = await Promise.allSettled([
-        RateLimiter.enqueue(NYC_OPEN_DATA_DOMAIN, () => this.fetchJson(`${ENDPOINTS.hpdViolations}${hpdQuery}`))
-      ]);
+    const [violationsResult, complaintsResult] = await Promise.allSettled([
+      this.fetchCount(`${ENDPOINTS.hpdViolations}?${hpdParams}`),
+      this.fetchCount(`${ENDPOINTS.complaints311}?${complaintsParams}`),
+    ]);
 
-      if (hpdRes.status === 'fulfilled') {
-        result.violations = parseInt(hpdRes.value[0]?.count || '0', 10);
-      } else {
-        errors.push({ source: 'HPD Violations API', message: hpdRes.reason?.message || 'Failed to fetch HPD data' });
-      }
+    if (violationsResult.status === 'fulfilled') {
+      result.violations = violationsResult.value;
+    } else {
+      const reason = violationsResult.reason as Error;
+      errors.push({ source: 'HPD Open Violations', message: reason.message || 'Failed to fetch HPD violations.' });
+    }
 
-    } catch (err: any) {
-      errors.push({ source: 'API Client', message: err.message || 'Unknown network error' });
+    if (complaintsResult.status === 'fulfilled') {
+      result.complaints = complaintsResult.value;
+      result.complaintSeverity = this.calculateSeverity(complaintsResult.value);
+    } else {
+      const reason = complaintsResult.reason as Error;
+      errors.push({ source: '311 Complaints', message: reason.message || 'Failed to fetch 311 complaints.' });
     }
 
     return { data: result, errors };
   }
 
-  private static async fetchJson(url: string) {
+  private static async fetchJson(url: string, headers: Record<string, string> = {}): Promise<any> {
     const response = await fetch(url, {
-      // add app token if we have one to increase rate limits, but works without it for MVP
-      headers: {
-        'Accept': 'application/json',
-      }
+      headers: { Accept: 'application/json', ...headers },
     });
 
     if (!response.ok) {
@@ -90,10 +120,9 @@ export class ApiClient {
     return response.json();
   }
 
-  // calculate severity for when we add complaints back in the future
-  private static calculateSeverity(complaints: number): 'low' | 'medium' | 'high' {
-    if (complaints < 5) return 'low';
-    if (complaints < 15) return 'medium';
+  private static calculateSeverity(count: number): 'low' | 'medium' | 'high' {
+    if (count < 5) return 'low';
+    if (count < 15) return 'medium';
     return 'high';
   }
 }

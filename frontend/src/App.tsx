@@ -3,6 +3,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { AddressTracker } from './components/features/AddressTracker';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
+import { PestSummary } from './components/features/PestSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
 
@@ -20,6 +21,7 @@ function App({ scrapedAddress }: AppProps) {
   const [settings, setSettings] = useState({
     showComplaints: true,
     showViolations: true,
+    showPestData: true,
     showRentEstimate: true,
   });
 
@@ -42,6 +44,16 @@ function App({ scrapedAddress }: AppProps) {
       {settings.showViolations && (
         <ViolationSummary
           violations={data?.violations ?? null}
+          dobViolations={data?.dobViolations ?? null}
+          isLoading={isLoading}
+        />
+      )}
+
+      {settings.showPestData && (
+        <PestSummary
+          bedbugReports={data?.bedbugReports ?? null}
+          rodentInspections={data?.rodentInspections ?? null}
+          rodentFailures={data?.rodentFailures ?? null}
           isLoading={isLoading}
         />
       )}
