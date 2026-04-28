@@ -52,6 +52,7 @@ function App({ scrapedAddress }: AppProps) {
       {settings.showPestData && (
         <PestSummary
           bedbugReports={data?.bedbugReports ?? null}
+          bedbugDetails={data?.bedbugDetails ?? null}
           rodentInspections={data?.rodentInspections ?? null}
           rodentFailures={data?.rodentFailures ?? null}
           isLoading={isLoading}

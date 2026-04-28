@@ -1,3 +1,9 @@
+export interface BedbugReport {
+  year: number;
+  infested: number;
+  eradicated: number;
+}
+
 export interface BuildingData {
   address: string;
   bbl: string | null;
@@ -6,6 +12,7 @@ export interface BuildingData {
   violations: number | null;
   dobViolations: number | null;
   bedbugReports: number | null;
+  bedbugDetails: BedbugReport[] | null;
   rodentInspections: number | null;
   rodentFailures: number | null;
   rentEstimate: number | null;

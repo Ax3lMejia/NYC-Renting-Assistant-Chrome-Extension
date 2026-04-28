@@ -1,4 +1,4 @@
-import { BuildingData, ApiError } from '../types/api';
+import { BuildingData, BedbugReport, ApiError } from '../types/api';
 import { RateLimiter } from './rateLimiter';
 
 const GEOCLIENT_DOMAIN = 'api.nyc.gov';
@@ -7,6 +7,7 @@ const AUGRENTED_DOMAIN = 'augrented.com';
 const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
   augrentedSearch: 'https://augrented.com/api/nyc/nyc/building/search',
+  augrentedBedbug: 'https://augrented.com/api/nyc/nyc/building/bedbug-reports',
 };
 
 export class ApiClient {
@@ -24,17 +25,17 @@ export class ApiClient {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Split on commas: ["441 63rd St", "Brooklyn", "NY 11220"]
+    // split on commas: ["441 63rd St", "Brooklyn", "NY 11220"]
     const parts = stripped.split(',').map(p => p.trim()).filter(Boolean);
 
-    // First part must be "houseNumber street"
+    // first part must be "houseNumber street"
     const streetMatch = parts[0]?.match(/^(\d+(?:-\d+)?)\s+(.+)/);
     if (!streetMatch) return null;
 
     const houseNumber = streetMatch[1].trim();
     const street = streetMatch[2].trim();
 
-    // Zip is anywhere in the remaining parts
+    // zip is anywhere in the remaining parts
     let zip: string | undefined;
     let borough: string | undefined;
 
@@ -95,6 +96,7 @@ export class ApiClient {
       violations: null,
       dobViolations: null,
       bedbugReports: null,
+      bedbugDetails: null,
       rodentInspections: null,
       rodentFailures: null,
       rentEstimate: null,
@@ -109,21 +111,32 @@ export class ApiClient {
 
     result.bbl = geocoded.bbl;
 
-    const params = new URLSearchParams({
+    const searchParams = new URLSearchParams({
       bbl: geocoded.bbl,
       bin: geocoded.bin,
       include_housing_complaints: 'true',
       include_housing_violations: 'true',
       include_dob_violations: 'true',
-      include_bedbug_reports: 'true',
       include_rodent_inspections: 'true',
       limit_per_category: '100',
     });
 
-    try {
-      const data = await RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
-        this.fetchJson(`${ENDPOINTS.augrentedSearch}?${params}`)
-      );
+    const bedbugParams = new URLSearchParams({
+      bbl: geocoded.bbl,
+      limit: '20',
+    });
+
+    const [searchResult, bedbugResult] = await Promise.allSettled([
+      RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
+        this.fetchJson(`${ENDPOINTS.augrentedSearch}?${searchParams}`)
+      ),
+      RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
+        this.fetchJson(`${ENDPOINTS.augrentedBedbug}?${bedbugParams}`)
+      ),
+    ]);
+
+    if (searchResult.status === 'fulfilled') {
+      const data = searchResult.value;
 
       if (Array.isArray(data.housing_complaints)) {
         const count = data.housing_complaints.length;
@@ -139,19 +152,22 @@ export class ApiClient {
         result.dobViolations = data.dob_violations.length;
       }
 
-      if (Array.isArray(data.bedbug_reports)) {
-        result.bedbugReports = data.bedbug_reports.length;
-      }
-
       if (Array.isArray(data.rodent_inspections)) {
         result.rodentInspections = data.rodent_inspections.length;
         result.rodentFailures = data.rodent_inspections.filter(
           (r: any) => typeof r.result === 'string' && r.result.toUpperCase().includes('FAIL')
         ).length;
       }
+    } else {
+      errors.push({ source: 'Augrented API', message: searchResult.reason?.message || 'Failed to fetch building data.' });
+    }
 
-    } catch (err: any) {
-      errors.push({ source: 'Augrented API', message: err.message || 'Failed to fetch building data.' });
+    if (bedbugResult.status === 'fulfilled') {
+      const reports: any[] = Array.isArray(bedbugResult.value) ? bedbugResult.value : bedbugResult.value?.results ?? [];
+      result.bedbugReports = reports.length;
+      result.bedbugDetails = this.parseBedbugReports(reports);
+    } else {
+      errors.push({ source: 'Bedbug API', message: bedbugResult.reason?.message || 'Failed to fetch bedbug reports.' });
     }
 
     return { data: result, errors };
@@ -169,6 +185,29 @@ export class ApiClient {
     }
 
     return response.json();
+  }
+
+  private static parseBedbugReports(records: any[]): BedbugReport[] {
+    const byYear = new Map<number, { infested: number; eradicated: number }>();
+
+    for (const r of records) {
+      const rawDate: string = r.filing_date ?? r.filingdate ?? r.date ?? '';
+      const year = rawDate ? new Date(rawDate).getFullYear() : NaN;
+      if (isNaN(year)) continue;
+
+      const infested = Number(r.infested_dwelling_unit_count ?? r.infested ?? 0);
+      const eradicated = Number(r.eradicated_unit_count ?? r.eradicated ?? 0);
+
+      const existing = byYear.get(year) ?? { infested: 0, eradicated: 0 };
+      byYear.set(year, {
+        infested: existing.infested + infested,
+        eradicated: existing.eradicated + eradicated,
+      });
+    }
+
+    return Array.from(byYear.entries())
+      .map(([year, counts]) => ({ year, ...counts }))
+      .sort((a, b) => b.year - a.year);
   }
 
   private static calculateSeverity(count: number): 'low' | 'medium' | 'high' {

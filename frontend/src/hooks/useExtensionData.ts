@@ -31,7 +31,11 @@ export function useExtensionData(address: string | null) {
           complaintSeverity: 'medium',
           violations: 8,
           dobViolations: 3,
-          bedbugReports: 1,
+          bedbugReports: 3,
+          bedbugDetails: [
+            { year: 2023, infested: 2, eradicated: 2 },
+            { year: 2021, infested: 1, eradicated: 1 },
+          ],
           rodentInspections: 5,
           rodentFailures: 2,
           rentEstimate: null,
