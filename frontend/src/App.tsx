@@ -44,6 +44,8 @@ function App({ scrapedAddress }: AppProps) {
           serviceRequests={data?.serviceRequests ?? null}
           openServiceRequests={data?.openServiceRequests ?? null}
           isLoading={isLoading}
+          bbl={data?.bbl ?? null}
+          address={data?.address ?? null}
         />
       )}
 

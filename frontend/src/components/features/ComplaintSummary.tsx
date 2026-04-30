@@ -13,6 +13,19 @@ interface ComplaintSummaryProps {
   serviceRequests: number | null;
   openServiceRequests: number | null;
   isLoading: boolean;
+  bbl: string | null;
+  address: string | null;
+}
+
+function buildAugrentedUrl(bbl: string | null, address: string | null): string | null {
+  if (!bbl || !address) return null;
+  const slug = address
+    .replace(/,?\s*NY\s*\d{5}.*/i, '')
+    .replace(/[^a-z0-9\s]/gi, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+  return `https://augrented.com/nyc/${bbl}-${slug}`;
 }
 
 export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
@@ -23,7 +36,11 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
   serviceRequests,
   openServiceRequests,
   isLoading,
+  bbl,
+  address,
 }) => {
+  const augrentedUrl = buildAugrentedUrl(bbl, address);
+
   const severityMap = {
     low: { variant: 'success', label: 'Low Frequency' },
     medium: { variant: 'warning', label: 'Moderate Issues' },
@@ -80,7 +97,13 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
               </div>
             </div>
 
-            <Button variant="outline" size="sm" className="w-full text-xs h-9">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-9"
+              disabled={!augrentedUrl}
+              onClick={() => augrentedUrl && window.open(augrentedUrl, '_blank')}
+            >
               <ExternalLink className="mr-2 h-3 w-3" />
               View on Augrented
             </Button>
