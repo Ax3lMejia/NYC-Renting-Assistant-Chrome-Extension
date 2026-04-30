@@ -1,11 +1,13 @@
-import React from 'react';
-import { Bug, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bug, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Heading, Text } from '../ui/Typography';
 import { Badge } from '../ui/Badge';
+import { BedbugReport } from '../../types/api';
 
 interface PestSummaryProps {
   bedbugReports: number | null;
+  bedbugDetails: BedbugReport[] | null;
   rodentInspections: number | null;
   rodentFailures: number | null;
   isLoading: boolean;
@@ -13,14 +15,19 @@ interface PestSummaryProps {
 
 export const PestSummary: React.FC<PestSummaryProps> = ({
   bedbugReports,
+  bedbugDetails,
   rodentInspections,
   rodentFailures,
   isLoading,
 }) => {
+  const [showBedbugBreakdown, setShowBedbugBreakdown] = useState(false);
+
   const rodentFailureRate =
     rodentInspections && rodentInspections > 0
       ? Math.round(((rodentFailures ?? 0) / rodentInspections) * 100)
       : 0;
+
+  const hasBedbugDetails = bedbugDetails && bedbugDetails.length > 0;
 
   return (
     <Card>
@@ -38,10 +45,45 @@ export const PestSummary: React.FC<PestSummaryProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Text weight="medium">Bedbug Reports</Text>
-              <Badge variant={bedbugReports && bedbugReports > 0 ? 'error' : 'success'}>
-                {bedbugReports ?? 0}
-              </Badge>
+              <div className="flex items-center gap-1">
+                <Badge variant={bedbugReports && bedbugReports > 0 ? 'error' : 'success'}>
+                  {bedbugReports ?? 0}
+                </Badge>
+                {hasBedbugDetails && (
+                  <button
+                    onClick={() => setShowBedbugBreakdown(v => !v)}
+                    className="text-primary-400 hover:text-primary-600 transition-colors"
+                    aria-label="Toggle bedbug year breakdown"
+                  >
+                    {showBedbugBreakdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
             </div>
+
+            {showBedbugBreakdown && hasBedbugDetails && (
+              <div className="rounded-lg border border-primary-100 overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-primary-50">
+                    <tr>
+                      <th className="text-left px-3 py-1.5 font-medium text-primary-600">Year</th>
+                      <th className="text-right px-3 py-1.5 font-medium text-primary-600">Infested</th>
+                      <th className="text-right px-3 py-1.5 font-medium text-primary-600">Eradicated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bedbugDetails!.map(row => (
+                      <tr key={row.year} className="border-t border-primary-50">
+                        <td className="px-3 py-1.5 text-primary-700">{row.year}</td>
+                        <td className="px-3 py-1.5 text-right text-rose-600 font-medium">{row.infested}</td>
+                        <td className="px-3 py-1.5 text-right text-emerald-600 font-medium">{row.eradicated}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <Text weight="medium">Rodent Inspections</Text>
               <Text size="sm" className="text-primary-500">
