@@ -1,10 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import './globals.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App scrapedAddress={null} />
+    <ErrorBoundary context={null}>
+      <App scrapedAddress={null} />
+    </ErrorBoundary>
   </React.StrictMode>,
 )

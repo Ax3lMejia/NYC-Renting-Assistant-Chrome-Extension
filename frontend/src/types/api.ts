@@ -4,6 +4,14 @@ export interface BedbugReport {
   eradicated: number;
 }
 
+export interface HpdViolationClassCounts {
+  a: number;
+  b: number;
+  c: number;
+  i: number;
+  unknown: number;
+}
+
 export interface BuildingData {
   address: string;
   bbl: string | null;
@@ -18,6 +26,7 @@ export interface BuildingData {
   openServiceRequests: number | null;
   // HPD maintenance code violations
   violations: number | null;
+  hpdViolationClassCounts: HpdViolationClassCounts | null;
   // DOB structural/safety violations
   dobViolations: number | null;
   // ECB penalty violations

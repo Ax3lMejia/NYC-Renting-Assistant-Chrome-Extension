@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from '../App';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import cssText from '../globals.css?inline';
 import { getZillowAddress, isZillowListingPage } from './selectors/zillow-selector';
 import { getStreetEasyAddress, isStreetEasyListingPage } from './selectors/streeteasy-selector';
@@ -65,7 +66,9 @@ function renderApp() {
 
   root.render(
     <React.StrictMode>
-      <App scrapedAddress={currentAddress} />
+      <ErrorBoundary context={currentAddress}>
+        <App scrapedAddress={currentAddress} />
+      </ErrorBoundary>
     </React.StrictMode>
   );
 }
@@ -80,7 +83,9 @@ function watchForPageChanges() {
       if (root) {
         root.render(
           <React.StrictMode>
-            <App scrapedAddress={currentAddress} />
+            <ErrorBoundary context={currentAddress}>
+              <App scrapedAddress={currentAddress} />
+            </ErrorBoundary>
           </React.StrictMode>
         );
       }

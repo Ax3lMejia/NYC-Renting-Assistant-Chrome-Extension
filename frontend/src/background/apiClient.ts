@@ -3,9 +3,11 @@ import { RateLimiter } from './rateLimiter';
 
 const GEOCLIENT_DOMAIN = 'api.nyc.gov';
 const AUGRENTED_DOMAIN = 'augrented.com';
+const NYC_OPENDATA_DOMAIN = 'data.cityofnewyork.us';
 
 const ENDPOINTS = {
-  geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
+  geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address.json',
+  hpdViolations: 'https://data.cityofnewyork.us/resource/wvxf-dwi5.json',
   augrentedSearch: 'https://augrented.com/api/nyc/nyc/building/search',
   augrentedBedbug: 'https://augrented.com/api/nyc/nyc/building/bedbug-reports',
   augrentedDobComplaints: 'https://augrented.com/api/nyc/nyc/building/dob-complaints',
@@ -15,6 +17,8 @@ const ENDPOINTS = {
 };
 
 export class ApiClient {
+  private static readonly NYC_BOROUGHS = ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'];
+
   // Parses a full address string into components for the Geoclient V2 address endpoint.
   // Input:  "441 63rd St APT 1R, Brooklyn, NY 11220"
   // Output: { houseNumber: "441", street: "63rd St", borough: "Brooklyn", zip: "11220" }
@@ -65,28 +69,42 @@ export class ApiClient {
     const components = this.parseAddressComponents(address);
     if (!components) return null;
 
-    const apiKey = import.meta.env.VITE_NYC_OPENDATA_API_KEY;
+    const apiKey = import.meta.env.VITE_NYC_OPENDATA_API_KEY?.trim();
 
-    const params = new URLSearchParams({
-      houseNumber: components.houseNumber,
-      street: components.street,
-      ...(components.zip && { zip: components.zip }),
-      ...(components.borough && !components.zip && { borough: components.borough }),
-    });
+    const boroughsToTry = components.zip
+      ? [undefined]
+      : [components.borough, ...this.NYC_BOROUGHS].filter(
+          (borough, index, boroughs): borough is string =>
+            Boolean(borough) && boroughs.indexOf(borough) === index
+        );
 
-    const url = `${ENDPOINTS.geoclientAddress}?${params}`;
+    for (const borough of boroughsToTry) {
+      const params = new URLSearchParams({
+        houseNumber: components.houseNumber,
+        street: components.street,
+        ...(components.zip && { zip: components.zip }),
+        ...(borough && { borough }),
+      });
 
-    try {
-      const data = await RateLimiter.enqueue(GEOCLIENT_DOMAIN, () =>
-        this.fetchJson(url, apiKey ? { 'Ocp-Apim-Subscription-Key': apiKey } : {})
-      );
-      const bbl = data?.address?.bbl;
-      const bin = data?.address?.buildingIdentificationNumber ?? data?.address?.bin;
-      if (!bbl) return null;
-      return { bbl: String(bbl), bin: bin ? String(bin) : String(bbl) };
-    } catch {
-      return null;
+      const url = `${ENDPOINTS.geoclientAddress}?${params}`;
+
+      try {
+        const data = await RateLimiter.enqueue(GEOCLIENT_DOMAIN, () =>
+          this.fetchJson(url, apiKey ? { 'Ocp-Apim-Subscription-Key': apiKey } : {})
+        );
+        const bbl = data?.address?.bbl;
+        const bin = data?.address?.buildingIdentificationNumber ?? data?.address?.bin;
+        if (bbl) {
+          return { bbl: String(bbl), bin: bin ? String(bin) : String(bbl) };
+        }
+      } catch (error: any) {
+        if (error?.status === 401 || error?.status === 403) {
+          throw error;
+        }
+      }
     }
+
+    return null;
   }
 
   static async fetchBuildingData(address: string): Promise<{ data: BuildingData; errors: ApiError[] }> {
@@ -102,6 +120,7 @@ export class ApiClient {
       serviceRequests: null,
       openServiceRequests: null,
       violations: null,
+      hpdViolationClassCounts: null,
       dobViolations: null,
       ecbViolations: null,
       openEcbViolations: null,
@@ -141,6 +160,7 @@ export class ApiClient {
       ecbResult,
       permitsResult,
       serviceRequestsResult,
+      hpdViolationsResult,
     ] = await Promise.allSettled([
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedSearch}?${searchParams}`)
@@ -160,6 +180,7 @@ export class ApiClient {
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedServiceRequests}?${new URLSearchParams({ bbl, limit: '100', status: 'ALL' })}`)
       ),
+      this.fetchHpdOpenViolationSummary(bbl),
     ]);
 
     // Search (housing complaints, HPD violations, DOB violations, rodent inspections)
@@ -185,6 +206,13 @@ export class ApiClient {
       }
     } else {
       errors.push({ source: 'Augrented', message: searchResult.reason?.message || 'Failed to fetch building data.' });
+    }
+
+    if (hpdViolationsResult.status === 'fulfilled') {
+      result.violations = hpdViolationsResult.value.total;
+      result.hpdViolationClassCounts = hpdViolationsResult.value.classCounts;
+    } else {
+      errors.push({ source: 'HPD Open Violations', message: hpdViolationsResult.reason?.message || 'Failed to fetch HPD open violations.' });
     }
 
     // Bedbug reports
@@ -263,6 +291,66 @@ export class ApiClient {
   private static isActivePermit(status: string): boolean {
     const s = status.toUpperCase();
     return s.includes('ISSUED') || s.includes('ACTIVE') || s.includes('RENEWAL');
+  }
+
+  private static async fetchHpdOpenViolationSummary(bbl: string): Promise<{
+    total: number;
+    classCounts: BuildingData['hpdViolationClassCounts'];
+  }> {
+    const parsed = this.parseBbl(bbl);
+    if (!parsed) {
+      throw new Error('Could not parse BBL for HPD violations lookup.');
+    }
+
+    const params = new URLSearchParams({
+      boroid: parsed.boroid,
+      block: parsed.block,
+      lot: parsed.lot,
+      violationstatus: 'Open',
+      '$select': 'class,count(*)',
+      '$group': 'class',
+    });
+
+    const rows = await RateLimiter.enqueue(NYC_OPENDATA_DOMAIN, () =>
+      this.fetchJson(`${ENDPOINTS.hpdViolations}?${params}`)
+    );
+
+    const classCounts = {
+      a: 0,
+      b: 0,
+      c: 0,
+      i: 0,
+      unknown: 0,
+    };
+
+    for (const row of this.toArray(rows)) {
+      const count = Number(row.count ?? row.count_1 ?? 0);
+      const violationClass = String(row.class ?? '').trim().toUpperCase();
+
+      if (!Number.isFinite(count)) continue;
+
+      if (violationClass === 'A') classCounts.a += count;
+      else if (violationClass === 'B') classCounts.b += count;
+      else if (violationClass === 'C') classCounts.c += count;
+      else if (violationClass === 'I') classCounts.i += count;
+      else classCounts.unknown += count;
+    }
+
+    return {
+      total: classCounts.a + classCounts.b + classCounts.c + classCounts.i + classCounts.unknown,
+      classCounts,
+    };
+  }
+
+  private static parseBbl(bbl: string): { boroid: string; block: string; lot: string } | null {
+    const normalized = bbl.replace(/\D/g, '').padStart(10, '0');
+    if (normalized.length !== 10) return null;
+
+    return {
+      boroid: normalized.slice(0, 1),
+      block: String(Number(normalized.slice(1, 6))),
+      lot: String(Number(normalized.slice(6, 10))),
+    };
   }
 
   private static async fetchJson(url: string, headers: Record<string, string> = {}): Promise<any> {

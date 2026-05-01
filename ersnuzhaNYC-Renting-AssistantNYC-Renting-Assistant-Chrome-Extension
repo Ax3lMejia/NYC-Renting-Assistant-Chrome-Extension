@@ -1,0 +1,10 @@
+[33m609a07c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/nuzhat-api-fixes[m[33m, [m[1;31morigin/feat/nuzhat-api-fixes[m[33m, [m[1;32mmain[m[33m)[m chore: remove accidental root artifacts
+[33mdb1f5bc[m[33m ([m[1;32mfeat/augrented-api[m[33m)[m Merge branch 'main' of https://github.com/Ax3lMejia/NYC-Renting-Assistant-Chrome-Extension into feat/augrented-api
+[33mf5df988[m[33m ([m[1;31morigin/feat/augrented-api[m[33m)[m feat: add Node.js backend with building insights API
+[33mc9de3fb[m Merge pull request #14 from Ax3lMejia/feat/augrented-api
+[33m7d12441[m feat: add 311 complaints API and StreetEasy address selector
+[33m9c34fe8[m pass scrapedAddress prop in main.tsx
+[33mdeb463a[m fix: clean site suffix and unit numbers from scraped address
+[33m02a7c77[m feat: show DOB violations and pest activity
+[33m99465b5[m refactor api switch from HPD SoQL to Geoclient + Augrented
+[33m744056f[m Merge pull request #10 from Ax3lMejia/dev

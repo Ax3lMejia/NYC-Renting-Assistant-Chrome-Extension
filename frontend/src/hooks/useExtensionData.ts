@@ -36,6 +36,13 @@ export function useExtensionData(address: string | null) {
           serviceRequests: 22,
           openServiceRequests: 4,
           violations: 8,
+          hpdViolationClassCounts: {
+            a: 3,
+            b: 4,
+            c: 1,
+            i: 0,
+            unknown: 0,
+          },
           dobViolations: 3,
           ecbViolations: 5,
           openEcbViolations: 1,

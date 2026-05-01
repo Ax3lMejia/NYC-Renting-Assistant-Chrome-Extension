@@ -2,6 +2,7 @@ import { BuildingData } from '../types/api';
 
 const CACHE_PREFIX = 'NYC_RA_CACHE_';
 const CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_SCHEMA_VERSION = 2;
 
 export class CacheManager {
   private static hasUsableData(data: BuildingData): boolean {
@@ -27,9 +28,9 @@ export class CacheManager {
       return null;
     }
 
-    const { data, timestamp } = cachedItem;
+    const { data, timestamp, version } = cachedItem;
 
-    if (Date.now() - timestamp > CACHE_EXPIRATION_MS) {
+    if (version !== CACHE_SCHEMA_VERSION || Date.now() - timestamp > CACHE_EXPIRATION_MS) {
       await this.remove(address);
       return null;
     }
@@ -47,7 +48,8 @@ export class CacheManager {
     const key = this.getCacheKey(address);
     const cacheItem = {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      version: CACHE_SCHEMA_VERSION
     };
     await chrome.storage.local.set({ [key]: cacheItem });
   }

@@ -50,6 +50,7 @@ function App({ scrapedAddress }: AppProps) {
       {settings.showViolations && (
         <ViolationSummary
           violations={data?.violations ?? null}
+          hpdViolationClassCounts={data?.hpdViolationClassCounts ?? null}
           dobViolations={data?.dobViolations ?? null}
           ecbViolations={data?.ecbViolations ?? null}
           openEcbViolations={data?.openEcbViolations ?? null}

@@ -3,9 +3,11 @@ import { AlertTriangle, Info } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Heading, Text } from '../ui/Typography';
 import { Badge } from '../ui/Badge';
+import { HpdViolationClassCounts } from '../../types/api';
 
 interface ViolationSummaryProps {
   violations: number | null;
+  hpdViolationClassCounts: HpdViolationClassCounts | null;
   dobViolations: number | null;
   ecbViolations: number | null;
   openEcbViolations: number | null;
@@ -14,11 +16,20 @@ interface ViolationSummaryProps {
 
 export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
   violations,
+  hpdViolationClassCounts,
   dobViolations,
   ecbViolations,
   openEcbViolations,
   isLoading,
 }) => {
+  const hasHpdBreakdown = hpdViolationClassCounts !== null && (
+    hpdViolationClassCounts.a > 0 ||
+    hpdViolationClassCounts.b > 0 ||
+    hpdViolationClassCounts.c > 0 ||
+    hpdViolationClassCounts.i > 0 ||
+    hpdViolationClassCounts.unknown > 0
+  );
+
   return (
     <Card>
       <CardHeader className="flex items-center space-x-2 py-3">
@@ -40,6 +51,26 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
                 {violations ?? 0}
               </Badge>
             </div>
+            {hasHpdBreakdown && (
+              <div className="grid grid-cols-4 gap-2 rounded-lg border border-primary-100 bg-primary-50 px-3 py-2">
+                <div>
+                  <Text size="xs" className="text-primary-500">A</Text>
+                  <Text size="sm" weight="medium">{hpdViolationClassCounts.a}</Text>
+                </div>
+                <div>
+                  <Text size="xs" className="text-primary-500">B</Text>
+                  <Text size="sm" weight="medium">{hpdViolationClassCounts.b}</Text>
+                </div>
+                <div>
+                  <Text size="xs" className="text-primary-500">C</Text>
+                  <Text size="sm" weight="medium">{hpdViolationClassCounts.c}</Text>
+                </div>
+                <div>
+                  <Text size="xs" className="text-primary-500">I</Text>
+                  <Text size="sm" weight="medium">{hpdViolationClassCounts.i}</Text>
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <Text weight="medium">DOB Violations</Text>
               <Badge variant={dobViolations && dobViolations > 5 ? 'error' : 'warning'}>
