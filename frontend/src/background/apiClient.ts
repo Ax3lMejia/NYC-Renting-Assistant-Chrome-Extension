@@ -8,6 +8,7 @@ const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
   augrentedSearch: 'https://augrented.com/api/nyc/nyc/building/search',
   augrentedBedbug: 'https://augrented.com/api/nyc/nyc/building/bedbug-reports',
+  augrentedHousingComplaints: 'https://augrented.com/api/nyc/nyc/building/housing-complaints',
   augrentedDobComplaints: 'https://augrented.com/api/nyc/nyc/building/dob-complaints',
   augrentedEcbViolations: 'https://augrented.com/api/nyc/nyc/building/ecb-violations',
   augrentedPermits: 'https://augrented.com/api/nyc/nyc/building/permits',
@@ -127,7 +128,6 @@ export class ApiClient {
 
     const searchParams = new URLSearchParams({
       bbl, bin,
-      include_housing_complaints: 'true',
       include_housing_violations: 'true',
       include_dob_violations: 'true',
       include_rodent_inspections: 'true',
@@ -137,6 +137,7 @@ export class ApiClient {
     const [
       searchResult,
       bedbugResult,
+      housingComplaintsResult,
       dobComplaintsResult,
       ecbResult,
       permitsResult,
@@ -147,6 +148,9 @@ export class ApiClient {
       ),
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedBedbug}?${new URLSearchParams({ bbl, limit: '50' })}`)
+      ),
+      RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
+        this.fetchJson(`${ENDPOINTS.augrentedHousingComplaints}?${new URLSearchParams({ bbl, limit: '500', status: 'ALL' })}`)
       ),
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedDobComplaints}?${new URLSearchParams({ bin, limit: '100', status: 'ALL' })}`)
@@ -162,15 +166,19 @@ export class ApiClient {
       ),
     ]);
 
-    // Search (housing complaints, HPD violations, DOB violations, rodent inspections)
+    // HPD housing complaints
+    if (housingComplaintsResult.status === 'fulfilled') {
+      const records = this.toArray(housingComplaintsResult.value);
+      result.complaints = records.length;
+      result.complaintSeverity = this.calculateSeverity(records.length);
+    } else {
+      errors.push({ source: 'HPD Complaints', message: housingComplaintsResult.reason?.message || 'Failed to fetch HPD complaints.' });
+    }
+
+    // Search (HPD violations, DOB violations, rodent inspections)
     if (searchResult.status === 'fulfilled') {
       const data = searchResult.value;
 
-      if (Array.isArray(data.housing_complaints)) {
-        const count = data.housing_complaints.length;
-        result.complaints = count;
-        result.complaintSeverity = this.calculateSeverity(count);
-      }
       if (Array.isArray(data.housing_violations)) {
         result.violations = data.housing_violations.length;
       }
