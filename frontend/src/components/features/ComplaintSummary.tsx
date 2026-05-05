@@ -57,24 +57,24 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
 
   return (
     <SectionCard
-      icon={<MessageSquareWarning className="h-4 w-4 text-amber-500" />}
+      icon={<MessageSquareWarning className="h-4 w-4 text-primary-600" />}
       title="Complaints"
       summary={summary}
       isLoading={isLoading}
     >
       {/* 3-stat grid */}
       <div className="grid grid-cols-3 gap-2 text-center mb-3">
-        <div className="bg-primary-50 rounded-lg py-2">
-          <div className="text-base font-bold font-serif text-primary-950">{complaints ?? '—'}</div>
-          <div className="text-[10px] text-primary-400 mt-0.5">HPD</div>
+        <div className="bg-primary-50/70 rounded-lg py-2.5">
+          <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{complaints ?? '—'}</div>
+          <div className="text-xs text-primary-400 mt-0.5">HPD</div>
         </div>
-        <div className="bg-primary-50 rounded-lg py-2">
-          <div className="text-base font-bold font-serif text-primary-950">{dobComplaints ?? '—'}</div>
-          <div className="text-[10px] text-primary-400 mt-0.5">DOB</div>
+        <div className="bg-primary-50/70 rounded-lg py-2.5">
+          <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{dobComplaints ?? '—'}</div>
+          <div className="text-xs text-primary-400 mt-0.5">DOB</div>
         </div>
-        <div className="bg-primary-50 rounded-lg py-2">
-          <div className="text-base font-bold font-serif text-primary-950">{serviceRequests ?? '—'}</div>
-          <div className="text-[10px] text-primary-400 mt-0.5">311</div>
+        <div className="bg-primary-50/70 rounded-lg py-2.5">
+          <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{serviceRequests ?? '—'}</div>
+          <div className="text-xs text-primary-400 mt-0.5">311</div>
         </div>
       </div>
 
@@ -99,17 +99,17 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
           href={augrentedUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 w-full text-[11px] font-medium h-7 px-3 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+          className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition-colors"
         >
-          <ExternalLink className="h-3 w-3" />
+          <ExternalLink className="h-3.5 w-3.5" />
           View on Augrented
         </a>
       ) : (
         <button
           disabled
-          className="flex items-center justify-center gap-1.5 w-full text-[11px] font-medium h-7 px-3 rounded-lg border border-primary-100 bg-primary-50 text-primary-300 cursor-not-allowed"
+          className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg border border-primary-100 bg-primary-50 text-primary-300 cursor-not-allowed"
         >
-          <ExternalLink className="h-3 w-3" />
+          <ExternalLink className="h-3.5 w-3.5" />
           View on Augrented
         </button>
       )}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
-import { PermitSummary } from './components/features/PermitSummary';
 import { PestSummary } from './components/features/PestSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
@@ -21,7 +20,6 @@ function App({ scrapedAddress }: AppProps) {
   const [settings, setSettings] = useState({
     showComplaints: true,
     showViolations: true,
-    showPermits: true,
     showPestData: true,
     showRentEstimate: true,
   });
@@ -63,14 +61,6 @@ function App({ scrapedAddress }: AppProps) {
           dobViolations={data?.dobViolations ?? null}
           ecbViolations={data?.ecbViolations ?? null}
           openEcbViolations={data?.openEcbViolations ?? null}
-          isLoading={isLoading}
-        />
-      )}
-
-      {settings.showPermits && (
-        <PermitSummary
-          permits={data?.permits ?? null}
-          activePermits={data?.activePermits ?? null}
           isLoading={isLoading}
         />
       )}

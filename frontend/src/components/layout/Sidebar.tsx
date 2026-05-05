@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div
         className={cn(
           "z-[9999] w-full flex flex-col",
-          !isPopup && "fixed top-4 right-4 bottom-4 w-85 rounded-2xl shadow-floating border border-primary-200/60 origin-right overflow-hidden",
+          !isPopup && "fixed top-4 right-4 bottom-4 w-90 bg-white/90 backdrop-blur-xl rounded-2xl shadow-floating border border-primary-200/50 origin-right overflow-hidden",
           !isPopup && (isOpen
             ? "opacity-100 translate-x-0 scale-100 transition-[transform,opacity] duration-300 ease-out"
             : "opacity-0 translate-x-full scale-95 pointer-events-none transition-[transform,opacity] duration-200 ease-in"),
@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Scroll body */}
         <div
           className={cn(
-            "flex-1 overflow-y-auto custom-scrollbar bg-primary-50/40 p-3 space-y-2",
+            "flex-1 overflow-y-auto custom-scrollbar bg-transparent p-2 space-y-1.5",
             isPopup && "pb-20"
           )}
         >

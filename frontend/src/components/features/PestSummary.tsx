@@ -42,23 +42,23 @@ export const PestSummary: React.FC<PestSummaryProps> = ({
 
   return (
     <SectionCard
-      icon={<Bug className="h-4 w-4 text-rose-500" />}
+      icon={<Bug className="h-4 w-4 text-primary-600" />}
       title="Pest Activity"
       summary={summary}
       isLoading={isLoading}
     >
       <div className="grid grid-cols-2 gap-2 text-center mb-2">
-        <div className={`rounded-lg py-2 ${hasBedbugs ? 'bg-red-50' : 'bg-primary-50'}`}>
-          <div className={`text-base font-bold font-serif ${hasBedbugs ? 'text-red-600' : 'text-green-600'}`}>
+        <div className={`rounded-lg py-2.5 ${hasBedbugs ? 'bg-red-50' : 'bg-primary-50/70'}`}>
+          <div className={`text-xl font-bold font-serif tabular-nums ${hasBedbugs ? 'text-red-600' : 'text-green-600'}`}>
             {bedbugReports ?? '—'}
           </div>
-          <div className="text-[10px] text-primary-400 mt-0.5">Bedbug reports</div>
+          <div className="text-xs text-primary-400 mt-0.5">Bedbug reports</div>
         </div>
-        <div className={`rounded-lg py-2 ${hasRodentIssues ? 'bg-amber-50' : 'bg-primary-50'}`}>
-          <div className={`text-base font-bold font-serif ${hasRodentIssues ? 'text-amber-600' : 'text-primary-950'}`}>
+        <div className={`rounded-lg py-2.5 ${hasRodentIssues ? 'bg-amber-50' : 'bg-primary-50/70'}`}>
+          <div className={`text-xl font-bold font-serif tabular-nums ${hasRodentIssues ? 'text-amber-600' : 'text-primary-950'}`}>
             {rodentInspections ? `${rodentFailures ?? 0}/${rodentInspections}` : '—'}
           </div>
-          <div className="text-[10px] text-primary-400 mt-0.5">Rodent fails</div>
+          <div className="text-xs text-primary-400 mt-0.5">Rodent fails</div>
         </div>
       </div>
 

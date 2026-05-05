@@ -35,29 +35,29 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
 
   return (
     <SectionCard
-      icon={<AlertTriangle className="h-4 w-4 text-orange-500" />}
+      icon={<AlertTriangle className="h-4 w-4 text-primary-600" />}
       title="Violations"
       summary={summary}
       isLoading={isLoading}
     >
       <div className="grid grid-cols-3 gap-2 text-center mb-2">
-        <div className="bg-primary-50 rounded-lg py-2">
-          <div className={`text-base font-bold font-serif ${violations && violations > 10 ? 'text-red-600' : 'text-primary-950'}`}>
+        <div className="bg-primary-50/70 rounded-lg py-2.5">
+          <div className={`text-xl font-bold font-serif tabular-nums ${violations && violations > 10 ? 'text-red-600' : 'text-primary-950'}`}>
             {violations ?? '—'}
           </div>
-          <div className="text-[10px] text-primary-400 mt-0.5">HPD</div>
+          <div className="text-xs text-primary-400 mt-0.5">HPD</div>
         </div>
-        <div className="bg-primary-50 rounded-lg py-2">
-          <div className={`text-base font-bold font-serif ${dobViolations && dobViolations > 5 ? 'text-red-600' : 'text-primary-950'}`}>
+        <div className="bg-primary-50/70 rounded-lg py-2.5">
+          <div className={`text-xl font-bold font-serif tabular-nums ${dobViolations && dobViolations > 5 ? 'text-red-600' : 'text-primary-950'}`}>
             {dobViolations ?? '—'}
           </div>
-          <div className="text-[10px] text-primary-400 mt-0.5">DOB</div>
+          <div className="text-xs text-primary-400 mt-0.5">DOB</div>
         </div>
-        <div className="bg-primary-50 rounded-lg py-2">
-          <div className={`text-base font-bold font-serif ${ecbViolations && ecbViolations > 5 ? 'text-red-600' : 'text-primary-950'}`}>
+        <div className="bg-primary-50/70 rounded-lg py-2.5">
+          <div className={`text-xl font-bold font-serif tabular-nums ${ecbViolations && ecbViolations > 5 ? 'text-red-600' : 'text-primary-950'}`}>
             {ecbViolations ?? '—'}
           </div>
-          <div className="text-[10px] text-primary-400 mt-0.5">ECB</div>
+          <div className="text-xs text-primary-400 mt-0.5">ECB</div>
         </div>
       </div>
 
@@ -69,7 +69,7 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
         </div>
       )}
 
-      <p className="text-[10px] text-primary-400 mt-2 leading-relaxed">
+      <p className="text-xs text-primary-400 mt-2 leading-relaxed">
         HPD: maintenance · DOB: structural/safety · ECB: penalty fines
       </p>
     </SectionCard>

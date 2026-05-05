@@ -22,10 +22,10 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white rounded-xl border border-primary-100 shadow-section overflow-hidden">
+    <div className="bg-white/75 backdrop-blur-sm rounded-xl border border-primary-200/60 shadow-section overflow-hidden">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-primary-50/70 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-3 hover:bg-primary-100/40 transition-colors cursor-pointer"
         aria-expanded={open}
       >
         <div className="flex items-center gap-2">
