@@ -37,8 +37,6 @@ export function useExtensionData(address: string | null) {
           dobViolations: 3,
           ecbViolations: 5,
           openEcbViolations: 1,
-          permits: 12,
-          activePermits: 2,
           bedbugReports: 3,
           bedbugDetails: [
             { year: 2023, infested: 2, eradicated: 2 },

@@ -23,9 +23,6 @@ export interface BuildingData {
   // ECB penalty violations
   ecbViolations: number | null;
   openEcbViolations: number | null;
-  // Permits
-  permits: number | null;
-  activePermits: number | null;
   // Pest
   bedbugReports: number | null;
   bedbugDetails: BedbugReport[] | null;

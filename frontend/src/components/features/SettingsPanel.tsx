@@ -6,17 +6,15 @@ interface SettingsPanelProps {
   settings: {
     showComplaints: boolean;
     showViolations: boolean;
-    showPermits: boolean;
     showPestData: boolean;
     showRentEstimate: boolean;
   };
-  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPermits' | 'showPestData' | 'showRentEstimate') => void;
+  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPestData' | 'showRentEstimate') => void;
 }
 
 const options = [
   { key: 'showComplaints', label: 'Complaints' },
   { key: 'showViolations', label: 'Violations' },
-  { key: 'showPermits', label: 'Permits' },
   { key: 'showPestData', label: 'Pest Activity' },
   { key: 'showRentEstimate', label: 'Rent Estimate' },
 ] as const;

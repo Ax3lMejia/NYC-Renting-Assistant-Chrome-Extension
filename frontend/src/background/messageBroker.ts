@@ -44,7 +44,7 @@ export class MessageBroker {
         const hasAnyData = data.complaints !== null || data.violations !== null ||
           data.dobViolations !== null || data.ecbViolations !== null ||
           data.dobComplaints !== null || data.serviceRequests !== null ||
-          data.permits !== null || data.bedbugReports !== null || data.rodentInspections !== null;
+          data.bedbugReports !== null || data.rodentInspections !== null;
         return {
           status: hasAnyData ? 'partial' : 'error',
           data,
