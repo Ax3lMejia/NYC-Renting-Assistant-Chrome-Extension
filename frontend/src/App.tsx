@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
-import { AddressTracker } from './components/features/AddressTracker';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
 import { PermitSummary } from './components/features/PermitSummary';
@@ -8,13 +7,13 @@ import { PestSummary } from './components/features/PestSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
 
-
 type AppProps = {
   scrapedAddress: string | null;
 };
 
 function App({ scrapedAddress }: AppProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const address = scrapedAddress;
   const { data, isLoading, error } = useExtensionData(address);
@@ -32,8 +31,17 @@ function App({ scrapedAddress }: AppProps) {
   };
 
   return (
-    <Sidebar isOpen={isOpen} onClose={() => setIsOpen(!isOpen)}>
-      <AddressTracker address={address} isLoading={isLoading} />
+    <Sidebar
+      isOpen={isOpen}
+      onClose={() => setIsOpen(!isOpen)}
+      showSettings={showSettings}
+      onToggleSettings={() => setShowSettings(v => !v)}
+      address={address}
+      isLoading={isLoading}
+    >
+      {showSettings && (
+        <SettingsPanel settings={settings} onToggle={handleToggle} />
+      )}
 
       {settings.showComplaints && (
         <ComplaintSummary
@@ -78,14 +86,12 @@ function App({ scrapedAddress }: AppProps) {
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-sm">
+        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-xs">
           {error}
         </div>
       )}
-
-      <SettingsPanel settings={settings} onToggle={handleToggle} />
     </Sidebar>
   );
-};
+}
 
 export default App;
