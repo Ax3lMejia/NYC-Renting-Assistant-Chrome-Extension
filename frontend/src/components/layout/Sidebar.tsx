@@ -2,6 +2,15 @@ import React from 'react';
 import { ChevronRight, X, Settings, PanelRightClose, MapPin, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { isExtensionPopup } from '../../utils/context';
+import { GradeResult } from '../../utils/buildingGrade';
+
+const GRADE_STYLES: Record<string, { strip: string; letter: string; sub: string; divider: string }> = {
+  A: { strip: 'bg-green-900/25 border-green-700/35', letter: 'text-green-300', sub: 'text-green-500/80', divider: 'bg-green-700/35' },
+  B: { strip: 'bg-teal-900/25 border-teal-700/35', letter: 'text-teal-300', sub: 'text-teal-500/80', divider: 'bg-teal-700/35' },
+  C: { strip: 'bg-amber-900/25 border-amber-700/35', letter: 'text-amber-300', sub: 'text-amber-500/80', divider: 'bg-amber-700/35' },
+  D: { strip: 'bg-orange-900/25 border-orange-700/35', letter: 'text-orange-300', sub: 'text-orange-500/80', divider: 'bg-orange-700/35' },
+  F: { strip: 'bg-red-900/25 border-red-700/35', letter: 'text-red-300', sub: 'text-red-500/80', divider: 'bg-red-700/35' },
+};
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,6 +19,7 @@ interface SidebarProps {
   onToggleSettings: () => void;
   address: string | null;
   isLoading: boolean;
+  grade: GradeResult | null;
   children: React.ReactNode;
 }
 
@@ -20,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleSettings,
   address,
   isLoading,
+  grade,
   children,
 }) => {
   const isPopup = isExtensionPopup();
@@ -97,6 +108,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             )}
           </div>
+
+          {/* Building grade strip */}
+          {isLoading ? (
+            <div className="mt-2 h-10 bg-primary-800/40 rounded-lg animate-pulse" />
+          ) : grade ? (
+            <div className={cn(
+              'mt-2 flex items-center gap-2.5 px-3 py-2 rounded-lg border',
+              GRADE_STYLES[grade.grade].strip
+            )}>
+              <span className={cn('text-2xl font-bold font-serif leading-none tabular-nums', GRADE_STYLES[grade.grade].letter)}>
+                {grade.grade}
+              </span>
+              <div className={cn('w-px h-6 shrink-0', GRADE_STYLES[grade.grade].divider)} />
+              <div className="flex flex-col min-w-0">
+                <span className={cn('text-[11px] font-semibold leading-tight', GRADE_STYLES[grade.grade].letter)}>
+                  {grade.label} Condition
+                </span>
+                <span className={cn('text-[9px] leading-tight mt-0.5', GRADE_STYLES[grade.grade].sub)}>
+                  Building Safety Score
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Scroll body */}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageSquareWarning, ExternalLink } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
+import { EmptyState } from '../ui/EmptyState';
 
 interface ComplaintSummaryProps {
   complaints: number | null;
@@ -35,17 +36,11 @@ const severityColor = {
 const severityLabel = { low: 'Low', medium: 'Moderate', high: 'High' };
 
 export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
-  complaints,
-  severity,
-  dobComplaints,
-  openDobComplaints,
-  serviceRequests,
-  openServiceRequests,
-  isLoading,
-  bbl,
-  address,
+  complaints, severity, dobComplaints, openDobComplaints,
+  serviceRequests, openServiceRequests, isLoading, bbl, address,
 }) => {
   const augrentedUrl = buildAugrentedUrl(bbl, address);
+  const isEmpty = complaints === null && dobComplaints === null && serviceRequests === null;
 
   const summary = severity ? (
     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${severityColor[severity]}`}>
@@ -62,56 +57,63 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
       summary={summary}
       isLoading={isLoading}
     >
-      {/* 3-stat grid */}
-      <div className="grid grid-cols-3 gap-2 text-center mb-3">
-        <div className="bg-primary-50/70 rounded-lg py-2.5">
-          <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{complaints ?? '—'}</div>
-          <div className="text-xs text-primary-400 mt-0.5">HPD</div>
-        </div>
-        <div className="bg-primary-50/70 rounded-lg py-2.5">
-          <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{dobComplaints ?? '—'}</div>
-          <div className="text-xs text-primary-400 mt-0.5">DOB</div>
-        </div>
-        <div className="bg-primary-50/70 rounded-lg py-2.5">
-          <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{serviceRequests ?? '—'}</div>
-          <div className="text-xs text-primary-400 mt-0.5">311</div>
-        </div>
-      </div>
-
-      {/* Open counts */}
-      {((openDobComplaints ?? 0) > 0 || (openServiceRequests ?? 0) > 0) && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {(openDobComplaints ?? 0) > 0 && (
-            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-medium">
-              {openDobComplaints} DOB open
-            </span>
-          )}
-          {(openServiceRequests ?? 0) > 0 && (
-            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-medium">
-              {openServiceRequests} 311 open
-            </span>
-          )}
-        </div>
-      )}
-
-      {augrentedUrl ? (
-        <a
-          href={augrentedUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition-colors"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          View on Augrented
-        </a>
+      {isEmpty ? (
+        <EmptyState
+          message="No complaint records found"
+          submessage="HPD, DOB, and 311 returned no data for this address"
+        />
       ) : (
-        <button
-          disabled
-          className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg border border-primary-100 bg-primary-50 text-primary-300 cursor-not-allowed"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          View on Augrented
-        </button>
+        <>
+          <div className="grid grid-cols-3 gap-2 text-center mb-3">
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{complaints ?? '—'}</div>
+              <div className="text-xs text-primary-400 mt-0.5">HPD</div>
+            </div>
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{dobComplaints ?? '—'}</div>
+              <div className="text-xs text-primary-400 mt-0.5">DOB</div>
+            </div>
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{serviceRequests ?? '—'}</div>
+              <div className="text-xs text-primary-400 mt-0.5">311</div>
+            </div>
+          </div>
+
+          {((openDobComplaints ?? 0) > 0 || (openServiceRequests ?? 0) > 0) && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {(openDobComplaints ?? 0) > 0 && (
+                <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-medium">
+                  {openDobComplaints} DOB open
+                </span>
+              )}
+              {(openServiceRequests ?? 0) > 0 && (
+                <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-medium">
+                  {openServiceRequests} 311 open
+                </span>
+              )}
+            </div>
+          )}
+
+          {augrentedUrl ? (
+            <a
+              href={augrentedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              View on Augrented
+            </a>
+          ) : (
+            <button
+              disabled
+              className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg border border-primary-100 bg-primary-50 text-primary-300 cursor-not-allowed"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              View on Augrented
+            </button>
+          )}
+        </>
       )}
     </SectionCard>
   );

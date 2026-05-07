@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bug, ChevronDown } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
+import { EmptyState } from '../ui/EmptyState';
 import { cn } from '../../utils/cn';
 import { BedbugReport } from '../../types/api';
 
@@ -115,7 +116,10 @@ export const PestSummary: React.FC<PestSummaryProps> = ({
       )}
 
       {bedbugReports === null && rodentInspections === null && (
-        <p className="text-[10px] text-primary-400 italic">No pest data available for this address.</p>
+        <EmptyState
+          message="No pest records found"
+          submessage="This address has no bedbug or rodent inspection records on file"
+        />
       )}
     </SectionCard>
   );

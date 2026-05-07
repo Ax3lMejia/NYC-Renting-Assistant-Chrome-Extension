@@ -5,6 +5,7 @@ import { ViolationSummary } from './components/features/ViolationSummary';
 import { PestSummary } from './components/features/PestSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
+import { calculateBuildingGrade } from './utils/buildingGrade';
 
 type AppProps = {
   scrapedAddress: string | null;
@@ -28,6 +29,8 @@ function App({ scrapedAddress }: AppProps) {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const grade = !isLoading && data ? calculateBuildingGrade(data) : null;
+
   return (
     <Sidebar
       isOpen={isOpen}
@@ -36,6 +39,7 @@ function App({ scrapedAddress }: AppProps) {
       onToggleSettings={() => setShowSettings(v => !v)}
       address={address}
       isLoading={isLoading}
+      grade={grade}
     >
       {showSettings && (
         <SettingsPanel settings={settings} onToggle={handleToggle} />
