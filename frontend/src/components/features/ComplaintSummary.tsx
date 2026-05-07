@@ -13,6 +13,20 @@ interface ComplaintSummaryProps {
   serviceRequests: number | null;
   openServiceRequests: number | null;
   isLoading: boolean;
+  bbl: string | null;
+  address: string | null;
+}
+
+function buildAugrentedUrl(bbl: string | null, address: string | null): string | null {
+  if (!bbl || !address) return null;
+  const slug = address
+    .replace(/,?\s*(apt\.?|apartment|unit|#|ste\.?|suite|fl\.?|floor)\s*[^,]*/gi, '')
+    .replace(/,?\s*NY\s*\d{5}.*/i, '')
+    .replace(/[^a-z0-9\s-]/gi, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+  return `https://augrented.com/nyc/${bbl}-${slug}`;
 }
 
 export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
@@ -23,7 +37,11 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
   serviceRequests,
   openServiceRequests,
   isLoading,
+  bbl,
+  address,
 }) => {
+  const augrentedUrl = buildAugrentedUrl(bbl, address);
+
   const severityMap = {
     low: { variant: 'success', label: 'Low Frequency' },
     medium: { variant: 'warning', label: 'Moderate Issues' },
@@ -80,10 +98,22 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
               </div>
             </div>
 
-            <Button variant="outline" size="sm" className="w-full text-xs h-9">
-              <ExternalLink className="mr-2 h-3 w-3" />
-              View on Augrented
-            </Button>
+            {augrentedUrl ? (
+              <a
+                href={augrentedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-full text-xs h-9 px-3 rounded-md border border-primary-200 bg-white text-primary-700 hover:bg-primary-50 transition-colors"
+              >
+                <ExternalLink className="mr-2 h-3 w-3" />
+                View on Augrented
+              </a>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full text-xs h-9" disabled>
+                <ExternalLink className="mr-2 h-3 w-3" />
+                View on Augrented
+              </Button>
+            )}
           </>
         )}
       </CardContent>
