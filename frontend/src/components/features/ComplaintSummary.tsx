@@ -1,9 +1,7 @@
 import React from 'react';
 import { MessageSquareWarning, ExternalLink } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '../ui/Card';
-import { Heading, Text } from '../ui/Typography';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
+import { SectionCard } from '../ui/SectionCard';
+import { EmptyState } from '../ui/EmptyState';
 
 interface ComplaintSummaryProps {
   complaints: number | null;
@@ -29,94 +27,94 @@ function buildAugrentedUrl(bbl: string | null, address: string | null): string |
   return `https://augrented.com/nyc/${bbl}-${slug}`;
 }
 
+const severityColor = {
+  low: 'text-green-600 bg-green-50 border-green-200',
+  medium: 'text-amber-600 bg-amber-50 border-amber-200',
+  high: 'text-red-600 bg-red-50 border-red-200',
+};
+
+const severityLabel = { low: 'Low', medium: 'Moderate', high: 'High' };
+
 export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
-  complaints,
-  severity,
-  dobComplaints,
-  openDobComplaints,
-  serviceRequests,
-  openServiceRequests,
-  isLoading,
-  bbl,
-  address,
+  complaints, severity, dobComplaints, openDobComplaints,
+  serviceRequests, openServiceRequests, isLoading, bbl, address,
 }) => {
   const augrentedUrl = buildAugrentedUrl(bbl, address);
+  const isEmpty = complaints === null && dobComplaints === null && serviceRequests === null;
 
-  const severityMap = {
-    low: { variant: 'success', label: 'Low Frequency' },
-    medium: { variant: 'warning', label: 'Moderate Issues' },
-    high: { variant: 'error', label: 'High Alert' },
-  } as const;
+  const summary = severity ? (
+    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${severityColor[severity]}`}>
+      {severityLabel[severity]}
+    </span>
+  ) : complaints !== null ? (
+    <span className="text-xs font-bold text-primary-600">{complaints}</span>
+  ) : undefined;
 
   return (
-    <Card>
-      <CardHeader className="flex items-center justify-between py-3">
-        <div className="flex items-center space-x-2">
-          <MessageSquareWarning className="h-5 w-5 text-primary-600" />
-          <Heading level={4}>Building Complaints</Heading>
-        </div>
-        {!isLoading && severity && (
-          <Badge variant={severityMap[severity].variant}>
-            {severityMap[severity].label}
-          </Badge>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoading ? (
-          <div className="space-y-2">
-            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
-            <div className="h-4 w-3/4 bg-primary-50/50 animate-pulse rounded" />
-            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
+    <SectionCard
+      icon={<MessageSquareWarning className="h-4 w-4 text-primary-600" />}
+      title="Complaints"
+      summary={summary}
+      isLoading={isLoading}
+    >
+      {isEmpty ? (
+        <EmptyState
+          message="No complaint records found"
+          submessage="HPD, DOB, and 311 returned no data for this address"
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2 text-center mb-3">
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{complaints ?? '—'}</div>
+              <div className="text-xs text-primary-400 mt-0.5">HPD</div>
+            </div>
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{dobComplaints ?? '—'}</div>
+              <div className="text-xs text-primary-400 mt-0.5">DOB</div>
+            </div>
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className="text-xl font-bold font-serif text-primary-950 tabular-nums">{serviceRequests ?? '—'}</div>
+              <div className="text-xs text-primary-400 mt-0.5">311</div>
+            </div>
           </div>
-        ) : (
-          <>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-3xl font-serif font-bold text-primary-950">
-                {complaints ?? 0}
-              </span>
-              <Text size="sm" className="text-primary-500">HPD Housing Complaints</Text>
-            </div>
 
-            <div className="space-y-2 pt-1 border-t border-primary-100">
-              <div className="flex items-center justify-between">
-                <Text size="sm" weight="medium">DOB Complaints</Text>
-                <div className="flex items-center gap-2">
-                  {openDobComplaints !== null && openDobComplaints > 0 && (
-                    <Badge variant="warning">{openDobComplaints} open</Badge>
-                  )}
-                  <Text size="sm" className="text-primary-500">{dobComplaints ?? 0} total</Text>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Text size="sm" weight="medium">311 Service Requests</Text>
-                <div className="flex items-center gap-2">
-                  {openServiceRequests !== null && openServiceRequests > 0 && (
-                    <Badge variant="warning">{openServiceRequests} open</Badge>
-                  )}
-                  <Text size="sm" className="text-primary-500">{serviceRequests ?? 0} total</Text>
-                </div>
-              </div>
+          {((openDobComplaints ?? 0) > 0 || (openServiceRequests ?? 0) > 0) && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {(openDobComplaints ?? 0) > 0 && (
+                <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-medium">
+                  {openDobComplaints} DOB open
+                </span>
+              )}
+              {(openServiceRequests ?? 0) > 0 && (
+                <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-medium">
+                  {openServiceRequests} 311 open
+                </span>
+              )}
             </div>
+          )}
 
-            {augrentedUrl ? (
-              <a
-                href={augrentedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center w-full text-xs h-9 px-3 rounded-md border border-primary-200 bg-white text-primary-700 hover:bg-primary-50 transition-colors"
-              >
-                <ExternalLink className="mr-2 h-3 w-3" />
-                View on Augrented
-              </a>
-            ) : (
-              <Button variant="outline" size="sm" className="w-full text-xs h-9" disabled>
-                <ExternalLink className="mr-2 h-3 w-3" />
-                View on Augrented
-              </Button>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          {augrentedUrl ? (
+            <a
+              href={augrentedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              View on Augrented
+            </a>
+          ) : (
+            <button
+              disabled
+              className="flex items-center justify-center gap-2 w-full text-xs font-semibold h-8 px-3 rounded-lg border border-primary-100 bg-primary-50 text-primary-300 cursor-not-allowed"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              View on Augrented
+            </button>
+          )}
+        </>
+      )}
+    </SectionCard>
   );
 };

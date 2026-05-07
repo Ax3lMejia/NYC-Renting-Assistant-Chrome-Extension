@@ -8,9 +8,10 @@ const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
   augrentedSearch: 'https://augrented.com/api/nyc/nyc/building/search',
   augrentedBedbug: 'https://augrented.com/api/nyc/nyc/building/bedbug-reports',
+  augrentedHousingComplaints: 'https://augrented.com/api/nyc/nyc/building/housing-complaints',
+  augrentedHousingViolations: 'https://augrented.com/api/nyc/nyc/building/housing-maintenance-code-violations',
   augrentedDobComplaints: 'https://augrented.com/api/nyc/nyc/building/dob-complaints',
   augrentedEcbViolations: 'https://augrented.com/api/nyc/nyc/building/ecb-violations',
-  augrentedPermits: 'https://augrented.com/api/nyc/nyc/building/permits',
   augrentedServiceRequests: 'https://augrented.com/api/nyc/nyc/building/service-requests',
 };
 
@@ -105,8 +106,6 @@ export class ApiClient {
       dobViolations: null,
       ecbViolations: null,
       openEcbViolations: null,
-      permits: null,
-      activePermits: null,
       bedbugReports: null,
       bedbugDetails: null,
       rodentInspections: null,
@@ -127,8 +126,6 @@ export class ApiClient {
 
     const searchParams = new URLSearchParams({
       bbl, bin,
-      include_housing_complaints: 'true',
-      include_housing_violations: 'true',
       include_dob_violations: 'true',
       include_rodent_inspections: 'true',
       limit_per_category: '100',
@@ -137,9 +134,10 @@ export class ApiClient {
     const [
       searchResult,
       bedbugResult,
+      housingComplaintsResult,
+      housingViolationsResult,
       dobComplaintsResult,
       ecbResult,
-      permitsResult,
       serviceRequestsResult,
     ] = await Promise.allSettled([
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
@@ -149,31 +147,43 @@ export class ApiClient {
         this.fetchJson(`${ENDPOINTS.augrentedBedbug}?${new URLSearchParams({ bbl, limit: '50' })}`)
       ),
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
+        this.fetchJson(`${ENDPOINTS.augrentedHousingComplaints}?${new URLSearchParams({ bbl, limit: '500', status: 'ALL' })}`)
+      ),
+      RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
+        this.fetchJson(`${ENDPOINTS.augrentedHousingViolations}?${new URLSearchParams({ bbl, limit: '500', status: 'ALL' })}`)
+      ),
+      RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedDobComplaints}?${new URLSearchParams({ bin, limit: '100', status: 'ALL' })}`)
       ),
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedEcbViolations}?${new URLSearchParams({ bbl, limit: '100', status: 'ALL' })}`)
       ),
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
-        this.fetchJson(`${ENDPOINTS.augrentedPermits}?${new URLSearchParams({ bin, limit: '50' })}`)
-      ),
-      RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedServiceRequests}?${new URLSearchParams({ bbl, limit: '100', status: 'ALL' })}`)
       ),
     ]);
 
-    // Search (housing complaints, HPD violations, DOB violations, rodent inspections)
+    // HPD housing complaints
+    if (housingComplaintsResult.status === 'fulfilled') {
+      const records = this.toArray(housingComplaintsResult.value);
+      result.complaints = records.length;
+      result.complaintSeverity = this.calculateSeverity(records.length);
+    } else {
+      errors.push({ source: 'HPD Complaints', message: housingComplaintsResult.reason?.message || 'Failed to fetch HPD complaints.' });
+    }
+
+    // HPD maintenance code violations
+    if (housingViolationsResult.status === 'fulfilled') {
+      const records = this.toArray(housingViolationsResult.value);
+      result.violations = records.length;
+    } else {
+      errors.push({ source: 'HPD Violations', message: housingViolationsResult.reason?.message || 'Failed to fetch HPD violations.' });
+    }
+
+    // Search (DOB violations, rodent inspections)
     if (searchResult.status === 'fulfilled') {
       const data = searchResult.value;
 
-      if (Array.isArray(data.housing_complaints)) {
-        const count = data.housing_complaints.length;
-        result.complaints = count;
-        result.complaintSeverity = this.calculateSeverity(count);
-      }
-      if (Array.isArray(data.housing_violations)) {
-        result.violations = data.housing_violations.length;
-      }
       if (Array.isArray(data.dob_violations)) {
         result.dobViolations = data.dob_violations.length;
       }
@@ -216,17 +226,6 @@ export class ApiClient {
       ).length;
     } else {
       errors.push({ source: 'ECB Violations', message: ecbResult.reason?.message || 'Failed to fetch ECB violations.' });
-    }
-
-    // Permits
-    if (permitsResult.status === 'fulfilled') {
-      const records = this.toArray(permitsResult.value);
-      result.permits = records.length;
-      result.activePermits = records.filter(
-        (r: any) => this.isActivePermit(r.permit_status ?? r.status ?? '')
-      ).length;
-    } else {
-      errors.push({ source: 'Permits', message: permitsResult.reason?.message || 'Failed to fetch permits.' });
     }
 
     // Service requests

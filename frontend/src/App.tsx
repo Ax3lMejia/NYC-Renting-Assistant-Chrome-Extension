@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
-import { AddressTracker } from './components/features/AddressTracker';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
-import { PermitSummary } from './components/features/PermitSummary';
 import { PestSummary } from './components/features/PestSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
-
+import { calculateBuildingGrade } from './utils/buildingGrade';
 
 type AppProps = {
   scrapedAddress: string | null;
@@ -15,6 +13,7 @@ type AppProps = {
 
 function App({ scrapedAddress }: AppProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const address = scrapedAddress;
   const { data, isLoading, error } = useExtensionData(address);
@@ -22,7 +21,6 @@ function App({ scrapedAddress }: AppProps) {
   const [settings, setSettings] = useState({
     showComplaints: true,
     showViolations: true,
-    showPermits: true,
     showPestData: true,
     showRentEstimate: true,
   });
@@ -31,9 +29,21 @@ function App({ scrapedAddress }: AppProps) {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const grade = !isLoading && data ? calculateBuildingGrade(data) : null;
+
   return (
-    <Sidebar isOpen={isOpen} onClose={() => setIsOpen(!isOpen)}>
-      <AddressTracker address={address} isLoading={isLoading} />
+    <Sidebar
+      isOpen={isOpen}
+      onClose={() => setIsOpen(!isOpen)}
+      showSettings={showSettings}
+      onToggleSettings={() => setShowSettings(v => !v)}
+      address={address}
+      isLoading={isLoading}
+      grade={grade}
+    >
+      {showSettings && (
+        <SettingsPanel settings={settings} onToggle={handleToggle} />
+      )}
 
       {settings.showComplaints && (
         <ComplaintSummary
@@ -59,14 +69,6 @@ function App({ scrapedAddress }: AppProps) {
         />
       )}
 
-      {settings.showPermits && (
-        <PermitSummary
-          permits={data?.permits ?? null}
-          activePermits={data?.activePermits ?? null}
-          isLoading={isLoading}
-        />
-      )}
-
       {settings.showPestData && (
         <PestSummary
           bedbugReports={data?.bedbugReports ?? null}
@@ -78,14 +80,12 @@ function App({ scrapedAddress }: AppProps) {
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-sm">
+        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-xs">
           {error}
         </div>
       )}
-
-      <SettingsPanel settings={settings} onToggle={handleToggle} />
     </Sidebar>
   );
-};
+}
 
 export default App;

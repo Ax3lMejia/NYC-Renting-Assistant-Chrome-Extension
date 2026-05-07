@@ -1,61 +1,46 @@
 import React from 'react';
-import { Settings, Eye, EyeOff } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '../ui/Card';
-import { Heading, Text } from '../ui/Typography';
+import { Eye, EyeOff } from 'lucide-react';
 import { Toggle } from '../ui/Toggle';
 
 interface SettingsPanelProps {
   settings: {
     showComplaints: boolean;
     showViolations: boolean;
-    showPermits: boolean;
     showPestData: boolean;
     showRentEstimate: boolean;
   };
-  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPermits' | 'showPestData' | 'showRentEstimate') => void;
+  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPestData' | 'showRentEstimate') => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onToggle }) => {
-  const options = [
-    { key: 'showComplaints', label: 'Complaints', description: 'HPD housing complaints, DOB complaints, and 311 service requests.' },
-    { key: 'showViolations', label: 'Building Violations', description: 'HPD maintenance, DOB structural, and ECB penalty violations.' },
-    { key: 'showPermits', label: 'Permits', description: 'DOB building permits and active construction on file.' },
-    { key: 'showPestData', label: 'Pest Activity', description: 'Bedbug reports and rodent inspection results.' },
-    { key: 'showRentEstimate', label: 'Market Rent Comparison', description: 'Compare current price with area averages.' },
-  ] as const;
+const options = [
+  { key: 'showComplaints', label: 'Complaints' },
+  { key: 'showViolations', label: 'Violations' },
+  { key: 'showPestData', label: 'Pest Activity' },
+  { key: 'showRentEstimate', label: 'Rent Estimate' },
+] as const;
 
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onToggle }) => {
   return (
-    <Card className="bg-primary-900 border-none shadow-floating">
-      <CardHeader className="flex items-center space-x-2 py-3 border-primary-800">
-        <Settings className="h-5 w-5 text-primary-300" />
-        <Heading level={4} className="text-white">Extension Settings</Heading>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {options.map((option) => (
-          <div key={option.key} className="flex items-center justify-between space-x-4">
-            <div className="flex-1 space-y-0.5">
-              <div className="flex items-center space-x-2">
-                {settings[option.key] ? (
-                  <Eye className="h-3 w-3 text-primary-400" />
-                ) : (
-                  <EyeOff className="h-3 w-3 text-primary-600" />
-                )}
-                <Text size="sm" weight="medium" className="text-primary-100">
-                  {option.label}
-                </Text>
-              </div>
-              <Text size="xs" className="text-primary-400 leading-tight">
-                {option.description}
-              </Text>
-            </div>
-            <Toggle
-              checked={settings[option.key]}
-              onChange={() => onToggle(option.key)}
-              className="bg-primary-800 border-primary-700"
-            />
+    <div className="bg-teal-50 rounded-xl border border-teal-100 px-3 py-2.5 space-y-1">
+      <p className="text-[10px] font-semibold text-teal-700 uppercase tracking-wider mb-2">
+        Visible Sections
+      </p>
+      {options.map((option) => (
+        <div key={option.key} className="flex items-center justify-between py-0.5">
+          <div className="flex items-center gap-1.5">
+            {settings[option.key] ? (
+              <Eye className="h-3 w-3 text-teal-600" />
+            ) : (
+              <EyeOff className="h-3 w-3 text-primary-400" />
+            )}
+            <span className="text-xs text-primary-700 font-medium">{option.label}</span>
           </div>
-        ))}
-      </CardContent>
-    </Card>
+          <Toggle
+            checked={settings[option.key]}
+            onChange={() => onToggle(option.key)}
+          />
+        </div>
+      ))}
+    </div>
   );
 };
