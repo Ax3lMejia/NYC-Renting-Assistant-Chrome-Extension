@@ -5,6 +5,6 @@ import './globals.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App scrapedAddress={null} />
+    <App scrapedAddress={import.meta.env.DEV ? '425 46th St, Brooklyn, NY 11220' : null} />
   </React.StrictMode>,
 )

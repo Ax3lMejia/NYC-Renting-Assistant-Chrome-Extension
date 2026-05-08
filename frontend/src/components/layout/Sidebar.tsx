@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChevronRight, X, Settings, PanelRightClose, MapPin, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Settings, PanelRightClose, MapPin, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { isExtensionPopup } from '../../utils/context';
 import { GradeResult } from '../../utils/buildingGrade';
@@ -13,8 +13,6 @@ const GRADE_STYLES: Record<string, { strip: string; letter: string; sub: string;
 };
 
 interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
   showSettings: boolean;
   onToggleSettings: () => void;
   address: string | null;
@@ -24,8 +22,6 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  isOpen,
-  onClose,
   showSettings,
   onToggleSettings,
   address,
@@ -33,22 +29,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   grade,
   children,
 }) => {
+  const [isOpen, setIsOpen] = useState(true);
   const isPopup = isExtensionPopup();
 
   return (
     <>
-      {!isOpen && !isPopup && (
-        <button
-          onClick={onClose}
-          className="fixed top-24 right-0 z-[9999] bg-primary-950 text-white p-3 rounded-l-2xl shadow-floating hover:bg-primary-800 transition-colors active:scale-95 group border-y border-l border-primary-800"
-        >
-          <div className="flex items-center space-x-1.5">
-            <ChevronRight className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform duration-150" />
-            <span className="text-[11px] font-bold pr-0.5 tracking-widest uppercase">NYC RA</span>
-          </div>
-        </button>
-      )}
-
       <div
         className={cn(
           "z-[9999] w-full flex flex-col",
@@ -84,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
               {!isPopup && (
                 <button
-                  onClick={onClose}
+                  onClick={() => setIsOpen(false)}
                   className="p-1.5 rounded-lg text-primary-500 hover:text-primary-200 hover:bg-primary-800 transition-colors"
                   aria-label="Close panel"
                 >

@@ -3,6 +3,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
 import { PestSummary } from './components/features/PestSummary';
+import { SafetySummary } from './components/features/SafetySummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
 import { calculateBuildingGrade } from './utils/buildingGrade';
@@ -12,10 +13,10 @@ type AppProps = {
 };
 
 function App({ scrapedAddress }: AppProps) {
-  const [isOpen, setIsOpen] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
 
   const address = scrapedAddress;
+
   const { data, isLoading, error } = useExtensionData(address);
 
   const [settings, setSettings] = useState({
@@ -23,6 +24,7 @@ function App({ scrapedAddress }: AppProps) {
     showViolations: true,
     showPestData: true,
     showRentEstimate: true,
+    showSafety: true,
   });
 
   const handleToggle = (key: keyof typeof settings) => {
@@ -31,10 +33,10 @@ function App({ scrapedAddress }: AppProps) {
 
   const grade = !isLoading && data ? calculateBuildingGrade(data) : null;
 
+  if (!scrapedAddress) return null;
+
   return (
     <Sidebar
-      isOpen={isOpen}
-      onClose={() => setIsOpen(!isOpen)}
       showSettings={showSettings}
       onToggleSettings={() => setShowSettings(v => !v)}
       address={address}
@@ -75,6 +77,13 @@ function App({ scrapedAddress }: AppProps) {
           bedbugDetails={data?.bedbugDetails ?? null}
           rodentInspections={data?.rodentInspections ?? null}
           rodentFailures={data?.rodentFailures ?? null}
+          isLoading={isLoading}
+        />
+      )}
+
+      {settings.showSafety && (
+        <SafetySummary
+          crimeData={data?.crimeData ?? null}
           isLoading={isLoading}
         />
       )}
