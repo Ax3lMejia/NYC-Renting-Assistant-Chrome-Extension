@@ -1,22 +1,13 @@
 import React from 'react';
-import { Shield } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
 import { EmptyState } from '../ui/EmptyState';
 import { CrimeData } from '../../types/api';
-import { calculateSafetyScore, SafetyGrade } from '../../utils/neighborhoodSafety';
+import { calculateSafetyScore } from '../../utils/neighborhoodSafety';
 
 interface SafetySummaryProps {
   crimeData: CrimeData | null;
   isLoading: boolean;
 }
-
-const GRADE_COLORS: Record<SafetyGrade, { bar: string; text: string; badge: string }> = {
-  A: { bar: 'bg-green-500', text: 'text-green-700', badge: 'text-green-600 bg-green-50 border-green-200' },
-  B: { bar: 'bg-teal-500', text: 'text-teal-700', badge: 'text-teal-600 bg-teal-50 border-teal-200' },
-  C: { bar: 'bg-amber-400', text: 'text-amber-700', badge: 'text-amber-600 bg-amber-50 border-amber-200' },
-  D: { bar: 'bg-orange-500', text: 'text-orange-700', badge: 'text-orange-600 bg-orange-50 border-orange-200' },
-  F: { bar: 'bg-red-500', text: 'text-red-700', badge: 'text-red-600 bg-red-50 border-red-200' },
-};
 
 export const SafetySummary: React.FC<SafetySummaryProps> = ({
   crimeData,
@@ -24,19 +15,23 @@ export const SafetySummary: React.FC<SafetySummaryProps> = ({
 }) => {
   const isEmpty = crimeData === null;
   const result = crimeData ? calculateSafetyScore(crimeData) : null;
-  const colors = result ? GRADE_COLORS[result.grade] : null;
 
-  const summary = result ? (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${colors!.badge}`}>
-      {result.grade} · {result.label}
-    </span>
-  ) : undefined;
+  const safetySeverity: 'low' | 'med' | 'high' =
+    !result ? 'low'
+    : result.grade === 'A' || result.grade === 'B' ? 'low'
+    : result.grade === 'C' ? 'med'
+    : 'high';
+
+  const safetyHeadline = isEmpty
+    ? 'No crime data available'
+    : `Safety score ${result?.score ?? 0} / 100`;
 
   return (
     <SectionCard
-      icon={<Shield className="h-4 w-4 text-primary-600" />}
-      title="Neighborhood Safety"
-      summary={summary}
+      emoji="🛡"
+      subjectName="Safety"
+      headline={safetyHeadline}
+      severity={safetySeverity}
       isLoading={isLoading}
     >
       {isEmpty ? (
@@ -49,14 +44,18 @@ export const SafetySummary: React.FC<SafetySummaryProps> = ({
           {/* Score bar */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className={`text-2xl font-bold font-serif tabular-nums ${colors!.text}`}>
+              <span className={`text-2xl font-bold font-serif tabular-nums ${
+                safetySeverity === 'low' ? 'text-green-700' : safetySeverity === 'med' ? 'text-amber-700' : 'text-red-700'
+              }`}>
                 {result?.score ?? 0}
               </span>
               <span className="text-[10px] text-primary-400">/ 100</span>
             </div>
             <div className="h-1.5 bg-primary-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-[width] duration-500 ${colors!.bar}`}
+                className={`h-full rounded-full transition-[width] duration-500 ${
+                  safetySeverity === 'low' ? 'bg-green-500' : safetySeverity === 'med' ? 'bg-amber-400' : 'bg-red-500'
+                }`}
                 style={{ width: `${result?.score ?? 0}%` }}
               />
             </div>

@@ -4,6 +4,12 @@ export interface BedbugReport {
   eradicated: number;
 }
 
+export interface CrimeData {
+  felony: number;
+  misdemeanor: number;
+  violation: number;
+}
+
 export interface BuildingData {
   address: string;
   bbl: string | null;
@@ -29,6 +35,9 @@ export interface BuildingData {
   rodentInspections: number | null;
   rodentFailures: number | null;
   rentEstimate: number | null;
+  // Neighborhood safety
+  crimeData: CrimeData | null;
+  safetyScore: number | null;
   lastUpdated: number;
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bug, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
 import { EmptyState } from '../ui/EmptyState';
 import { cn } from '../../utils/cn';
@@ -31,21 +31,27 @@ export const PestSummary: React.FC<PestSummaryProps> = ({
   const hasBedbugs = (bedbugReports ?? 0) > 0;
   const hasRodentIssues = rodentFailureRate > 20;
 
-  const summary = bedbugReports !== null ? (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${
-      hasBedbugs || hasRodentIssues
-        ? 'text-red-600 bg-red-50 border-red-200'
-        : 'text-green-600 bg-green-50 border-green-200'
-    }`}>
-      {hasBedbugs || hasRodentIssues ? 'Issues found' : 'Clear'}
-    </span>
-  ) : undefined;
+  const isEmpty = bedbugReports === null && rodentInspections === null;
+
+  const pestSeverity: 'low' | 'med' | 'high' =
+    hasBedbugs && hasRodentIssues ? 'high'
+    : hasBedbugs || hasRodentIssues ? 'med'
+    : 'low';
+
+  const pestHeadline = isEmpty
+    ? 'No pest records found'
+    : hasBedbugs
+    ? `${bedbugReports} bedbug report${(bedbugReports ?? 0) === 1 ? '' : 's'} on file`
+    : hasRodentIssues
+    ? `Rodent fail rate: ${rodentFailureRate}%`
+    : 'No bedbug filings on record';
 
   return (
     <SectionCard
-      icon={<Bug className="h-4 w-4 text-primary-600" />}
-      title="Pest Activity"
-      summary={summary}
+      emoji="🐛"
+      subjectName="Cleanliness"
+      headline={pestHeadline}
+      severity={pestSeverity}
       isLoading={isLoading}
     >
       <div className="grid grid-cols-2 gap-2 text-center mb-2">

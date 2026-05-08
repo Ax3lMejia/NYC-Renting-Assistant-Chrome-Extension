@@ -1,5 +1,4 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
 import { EmptyState } from '../ui/EmptyState';
 
@@ -19,23 +18,19 @@ export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
   const isMedium = total > 5;
   const isEmpty = violations === null && dobViolations === null && ecbViolations === null;
 
-  const summary = violations !== null ? (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${
-      isHigh
-        ? 'text-red-600 bg-red-50 border-red-200'
-        : isMedium
-          ? 'text-amber-600 bg-amber-50 border-amber-200'
-          : 'text-green-600 bg-green-50 border-green-200'
-    }`}>
-      {total} total
-    </span>
-  ) : undefined;
+  const severity: 'low' | 'med' | 'high' = isHigh ? 'high' : isMedium ? 'med' : 'low';
+  const headline = isEmpty
+    ? 'No violation records found'
+    : total === 0
+    ? '0 open violations'
+    : `${total} total violation${total === 1 ? '' : 's'}`;
 
   return (
     <SectionCard
-      icon={<AlertTriangle className="h-4 w-4 text-primary-600" />}
-      title="Violations"
-      summary={summary}
+      emoji="📋"
+      subjectName="Compliance"
+      headline={headline}
+      severity={severity}
       isLoading={isLoading}
     >
       {isEmpty ? (

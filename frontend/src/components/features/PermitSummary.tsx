@@ -1,5 +1,4 @@
 import React from 'react';
-import { HardHat } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
 
 interface PermitSummaryProps {
@@ -13,21 +12,20 @@ export const PermitSummary: React.FC<PermitSummaryProps> = ({
   activePermits,
   isLoading,
 }) => {
-  const summary = permits !== null ? (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${
-      (activePermits ?? 0) > 0
-        ? 'text-amber-600 bg-amber-50 border-amber-200'
-        : 'text-green-600 bg-green-50 border-green-200'
-    }`}>
-      {activePermits ?? 0} active
-    </span>
-  ) : undefined;
+  const hasActive = (activePermits ?? 0) > 0;
+  const severity: 'low' | 'med' | 'high' = hasActive ? 'med' : 'low';
+  const headline = permits === null
+    ? 'No permit records found'
+    : permits === 0
+    ? '0 permits on file'
+    : `${permits} permit${permits === 1 ? '' : 's'} on file`;
 
   return (
     <SectionCard
-      icon={<HardHat className="h-4 w-4 text-sky-500" />}
-      title="Permits"
-      summary={summary}
+      emoji="🏗"
+      subjectName="Permits"
+      headline={headline}
+      severity={severity}
       isLoading={isLoading}
     >
       <div className="grid grid-cols-2 gap-2 text-center">
@@ -36,14 +34,14 @@ export const PermitSummary: React.FC<PermitSummaryProps> = ({
           <div className="text-xs text-primary-400 mt-0.5">Total on file</div>
         </div>
         <div className="bg-primary-50/70 rounded-lg py-2.5">
-          <div className={`text-xl font-bold font-serif tabular-nums ${(activePermits ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+          <div className={`text-xl font-bold font-serif tabular-nums ${hasActive ? 'text-amber-600' : 'text-green-600'}`}>
             {activePermits ?? '—'}
           </div>
           <div className="text-xs text-primary-400 mt-0.5">Active / issued</div>
         </div>
       </div>
 
-      {(activePermits ?? 0) > 0 && (
+      {hasActive && (
         <p className="text-xs text-amber-600 mt-2 leading-relaxed">
           Active permits indicate ongoing construction or renovation.
         </p>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquareWarning, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { SectionCard } from '../ui/SectionCard';
 import { EmptyState } from '../ui/EmptyState';
 
@@ -27,14 +27,6 @@ function buildAugrentedUrl(bbl: string | null, address: string | null): string |
   return `https://augrented.com/nyc/${bbl}-${slug}`;
 }
 
-const severityColor = {
-  low: 'text-green-600 bg-green-50 border-green-200',
-  medium: 'text-amber-600 bg-amber-50 border-amber-200',
-  high: 'text-red-600 bg-red-50 border-red-200',
-};
-
-const severityLabel = { low: 'Low', medium: 'Moderate', high: 'High' };
-
 export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
   complaints, severity, dobComplaints, openDobComplaints,
   serviceRequests, openServiceRequests, isLoading, bbl, address,
@@ -42,19 +34,23 @@ export const ComplaintSummary: React.FC<ComplaintSummaryProps> = ({
   const augrentedUrl = buildAugrentedUrl(bbl, address);
   const isEmpty = complaints === null && dobComplaints === null && serviceRequests === null;
 
-  const summary = severity ? (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${severityColor[severity]}`}>
-      {severityLabel[severity]}
-    </span>
-  ) : complaints !== null ? (
-    <span className="text-xs font-bold text-primary-600">{complaints}</span>
-  ) : undefined;
+  // Map API 'medium' → SectionCard 'med'; default null → 'low'
+  const cardSeverity: 'low' | 'med' | 'high' =
+    severity === 'high' ? 'high' : severity === 'medium' ? 'med' : 'low';
+
+  const total = (complaints ?? 0) + (dobComplaints ?? 0) + (serviceRequests ?? 0);
+  const headline = isEmpty
+    ? 'No complaint records found'
+    : total === 0
+    ? '0 complaints on record'
+    : `${total} total complaint${total === 1 ? '' : 's'}`;
 
   return (
     <SectionCard
-      icon={<MessageSquareWarning className="h-4 w-4 text-primary-600" />}
-      title="Complaints"
-      summary={summary}
+      emoji="🔔"
+      subjectName="Quietude"
+      headline={headline}
+      severity={cardSeverity}
       isLoading={isLoading}
     >
       {isEmpty ? (
