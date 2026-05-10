@@ -42,6 +42,8 @@ function App({ scrapedAddress }: AppProps) {
       address={address}
       isLoading={isLoading}
       grade={grade}
+      buildingData={data}
+      listingUrl={typeof window !== 'undefined' ? window.location.href : undefined}
     >
       {showSettings && (
         <SettingsPanel settings={settings} onToggle={handleToggle} />

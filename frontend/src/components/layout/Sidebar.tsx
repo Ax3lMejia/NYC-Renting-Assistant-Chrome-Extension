@@ -4,6 +4,10 @@ import { cn } from '../../utils/cn';
 import { isExtensionPopup } from '../../utils/context';
 import { GradeResult, getGradeBlurb, getGradeQuote } from '../../utils/buildingGrade';
 import { Mascot } from '../ui/Mascot';
+import { useAuth } from '../../hooks/useAuth';
+import { BookmarkButton } from '../features/BookmarkButton';
+import { AuthPanel } from '../features/AuthPanel';
+import { BuildingData } from '../../types/api';
 
 interface SidebarProps {
   showSettings: boolean;
@@ -11,6 +15,8 @@ interface SidebarProps {
   address: string | null;
   isLoading: boolean;
   grade: GradeResult | null;
+  buildingData?: BuildingData | null;
+  listingUrl?: string;
   children: React.ReactNode;
 }
 
@@ -20,10 +26,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   address,
   isLoading,
   grade,
+  buildingData,
+  listingUrl,
   children,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [showAuthPanel, setShowAuthPanel] = useState(false);
   const isPopup = isExtensionPopup();
+  const { user } = useAuth();
 
   const g = grade?.grade ?? null;
   const isGood = g === 'A' || g === 'B';
@@ -47,10 +57,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isPopup && "min-h-screen"
       )} style={{ background: '#C49F6D', fontFamily: 'Geist, system-ui, sans-serif', color: '#14110D' }}>
 
-        {/* === HEADER (warm tan) === */}
+        {/* === HEADER === */}
         <div className="shrink-0 px-4 pt-3.5 pb-3" style={{ background: '#C49F6D' }}>
 
-          {/* Top bar: RENT ASSISTANT label + Settings + X */}
+          {/* Top bar */}
           <div className="flex items-center justify-between mb-2">
             <span style={{
               fontFamily: 'Geist Mono, ui-monospace, monospace',
@@ -59,7 +69,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}>
               RENT ASSISTANT
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              {address && !isLoading && (
+                user ? (
+                  <BookmarkButton
+                    address={address}
+                    listingUrl={listingUrl ?? window.location.href}
+                    buildingData={buildingData ?? null}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setShowAuthPanel(v => !v)}
+                    style={{
+                      fontSize: 10, color: 'rgba(20,17,13,0.55)',
+                      background: showAuthPanel ? 'rgba(20,17,13,0.10)' : 'none',
+                      border: 'none', cursor: 'pointer',
+                      padding: '3px 7px', borderRadius: 6,
+                      fontFamily: 'Geist, system-ui, sans-serif',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    Sign in to save
+                  </button>
+                )
+              )}
               <button
                 onClick={onToggleSettings}
                 className={cn(
@@ -116,7 +149,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               opacity: loaded ? 1 : 0,
               transition: 'all 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.15s'
             }}>
-              {/* Grade letter box */}
               <div style={{
                 width: 52, height: 52, borderRadius: 14, flexShrink: 0,
                 background: gradeCardBg,
@@ -140,11 +172,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : null}
         </div>
 
-        {/* === BODY (cream background) === */}
+        {/* === BODY === */}
         <div
           className={cn("flex-1 overflow-y-auto hide-scroll p-2 space-y-1.5", isPopup && "pb-20")}
           style={{ background: '#F4EDDD' }}
         >
+          {showAuthPanel && !user && (
+            <AuthPanel onSuccess={() => setShowAuthPanel(false)} compact />
+          )}
           {children}
         </div>
 
