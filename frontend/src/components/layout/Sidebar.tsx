@@ -1,73 +1,198 @@
-import React from 'react';
-import { X, ChevronRight, PanelRightClose } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Settings } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { Button } from '../ui/Button';
-import { Heading } from '../ui/Typography';
 import { isExtensionPopup } from '../../utils/context';
+import { GradeResult, getGradeBlurb, getGradeQuote } from '../../utils/buildingGrade';
+import { Mascot } from '../ui/Mascot';
+import { useAuth } from '../../hooks/useAuth';
+import { BookmarkButton } from '../features/BookmarkButton';
+import { AuthPanel } from '../features/AuthPanel';
+import { BuildingData } from '../../types/api';
 
 interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+  showSettings: boolean;
+  onToggleSettings: () => void;
+  address: string | null;
+  isLoading: boolean;
+  grade: GradeResult | null;
+  buildingData?: BuildingData | null;
+  listingUrl?: string;
   children: React.ReactNode;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, children }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  showSettings,
+  onToggleSettings,
+  address,
+  isLoading,
+  grade,
+  buildingData,
+  listingUrl,
+  children,
+}) => {
+  const [isOpen, setIsOpen] = useState(true);
+  const [showAuthPanel, setShowAuthPanel] = useState(false);
   const isPopup = isExtensionPopup();
+  const { user } = useAuth();
+
+  const g = grade?.grade ?? null;
+  const isGood = g === 'A' || g === 'B';
+  const isMid = g === 'C';
+
+  const gradeCardBg = isGood ? '#4D6B47' : isMid ? '#F5C747' : '#E84A1F';
+  const gradeCardShadow = isGood ? '0 6px 0 #3a5236' : isMid ? '0 6px 0 #c89e23' : '0 6px 0 #b53718';
+  const gradeCardText = '#fff';
+
+  const shortAddress = address ? address.split(',')[0] : null;
+  const loaded = !isLoading && grade !== null;
 
   return (
     <>
-      {!isOpen && !isPopup && (
-        <button
-          onClick={onClose}
-          className="fixed top-24 right-0 z-[9999] bg-primary-900 text-white p-3 rounded-l-2xl shadow-floating hover:bg-primary-800 transition-all active:scale-95 group border-y border-l border-primary-700"
-        >
-          <div className="flex items-center space-x-2">
-            <ChevronRight className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-serif font-bold text-sm pr-1">NYC RA</span>
-          </div>
-        </button>
-      )}
+      <div className={cn(
+        "z-[9999] w-full flex flex-col",
+        !isPopup && "fixed top-4 right-4 bottom-4 w-90 rounded-2xl shadow-floating overflow-hidden border border-black/8",
+        !isPopup && (isOpen
+          ? "opacity-100 translate-x-0 scale-100 transition-[transform,opacity] duration-300 ease-out"
+          : "opacity-0 translate-x-full scale-95 pointer-events-none transition-[transform,opacity] duration-200 ease-in"),
+        isPopup && "min-h-screen"
+      )} style={{ background: '#C49F6D', fontFamily: 'Geist, system-ui, sans-serif', color: '#14110D' }}>
 
-      <div
-        className={cn(
-          "z-[9999] w-full flex flex-col transition-all duration-300 ease-in-out",
-          !isPopup && "fixed top-4 right-4 bottom-4 w-85 bg-white/95 backdrop-blur-md rounded-3xl shadow-floating border border-primary-100 origin-right",
-          !isPopup && (isOpen ? "translate-x-0 opacity-100 scale-100" : "translate-x-full opacity-0 scale-95 pointer-events-none"),
-          isPopup && "min-h-screen bg-white"
-        )}
-      >
+        {/* === HEADER === */}
+        <div className="shrink-0 px-4 pt-3.5 pb-3" style={{ background: '#C49F6D' }}>
 
-        <div className="p-6 flex items-center justify-between border-b border-primary-50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary-950 rounded-xl shadow-elegant">
-              <PanelRightClose className="h-5 w-5 text-white" />
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-2">
+            <span style={{
+              fontFamily: 'Geist Mono, ui-monospace, monospace',
+              fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.65,
+              color: '#14110D'
+            }}>
+              RENT ASSISTANT
+            </span>
+            <div className="flex items-center gap-1.5">
+              {address && !isLoading && (
+                user ? (
+                  <BookmarkButton
+                    address={address}
+                    listingUrl={listingUrl ?? window.location.href}
+                    buildingData={buildingData ?? null}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setShowAuthPanel(v => !v)}
+                    style={{
+                      fontSize: 10, color: 'rgba(20,17,13,0.55)',
+                      background: showAuthPanel ? 'rgba(20,17,13,0.10)' : 'none',
+                      border: 'none', cursor: 'pointer',
+                      padding: '3px 7px', borderRadius: 6,
+                      fontFamily: 'Geist, system-ui, sans-serif',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    Sign in to save
+                  </button>
+                )
+              )}
+              <button
+                onClick={onToggleSettings}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  showSettings ? "bg-black/20 text-white" : "text-black/50 hover:text-black/80 hover:bg-black/10"
+                )}
+                aria-label="Toggle settings"
+                aria-pressed={showSettings}
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </button>
+              {!isPopup && (
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-lg text-black/50 hover:text-black/80 hover:bg-black/10 transition-colors"
+                  aria-label="Close panel"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
-            <Heading level={3} className="text-primary-950">Renting Assistant</Heading>
           </div>
-          {!isPopup && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="rounded-full hover:bg-primary-100"
-            >
-              <X className="h-5 w-5 text-primary-500" />
-            </Button>
-          )}
+
+          {/* Mascot + quote row */}
+          <div className="flex items-center gap-3 mb-3">
+            {g && <Mascot grade={g} loaded={loaded} size={56} />}
+            <div className="flex-1 min-w-0">
+              {shortAddress && (
+                <div style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.3, color: '#14110D' }}>
+                  {shortAddress} says…
+                </div>
+              )}
+              <div style={{
+                fontFamily: 'Instrument Serif, Georgia, serif',
+                fontSize: 18, lineHeight: 1.1, fontStyle: 'italic', marginTop: 2, color: '#14110D'
+              }}>
+                {isLoading
+                  ? 'Checking the building…'
+                  : g ? getGradeQuote(g) : 'Looking up your address…'}
+              </div>
+            </div>
+          </div>
+
+          {/* Grade card */}
+          {isLoading ? (
+            <div className="rounded-xl h-16 animate-pulse" style={{ background: 'rgba(20,17,13,0.15)' }} />
+          ) : g ? (
+            <div style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: '10px 12px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              transform: loaded ? 'translateY(0)' : 'translateY(8px)',
+              opacity: loaded ? 1 : 0,
+              transition: 'all 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.15s'
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+                background: gradeCardBg,
+                color: gradeCardText,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Instrument Serif, Georgia, serif',
+                fontSize: 38, fontWeight: 400, lineHeight: 1, fontStyle: 'italic',
+                boxShadow: gradeCardShadow,
+              }}>
+                {g}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#14110D', lineHeight: 1.2 }}>
+                  {grade!.label} Condition
+                </div>
+                <div style={{ fontSize: 11, color: '#3A3530', lineHeight: 1.4, marginTop: 2 }}>
+                  {getGradeBlurb(g)}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
-        <div className={cn(
-          "flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6",
-          isPopup && "pb-24"
-        )}>
+        {/* === BODY === */}
+        <div
+          className={cn("flex-1 overflow-y-auto hide-scroll p-2 space-y-1.5", isPopup && "pb-20")}
+          style={{ background: '#F4EDDD' }}
+        >
+          {showAuthPanel && !user && (
+            <AuthPanel onSuccess={() => setShowAuthPanel(false)} compact />
+          )}
           {children}
         </div>
 
-        <div className="p-6 border-t border-primary-50 bg-primary-50/30">
-          <p className="text-[10px] text-primary-400 leading-relaxed italic text-center">
-            Aggregating NYC Open Data, HPD & 311 records.<br />
-            Data is provided for informational purposes only.
-          </p>
+        {/* === FOOTER === */}
+        <div style={{
+          padding: '6px 16px', borderTop: '1px solid rgba(20,17,13,0.10)',
+          background: '#FFFFFF',
+          fontFamily: 'Geist Mono, ui-monospace, monospace',
+          fontSize: 9, letterSpacing: '0.14em', color: '#8a8377',
+          textAlign: 'center', textTransform: 'uppercase',
+          flexShrink: 0,
+        }}>
+          NYC Open Data · HPD · DOB · 311
         </div>
       </div>
     </>

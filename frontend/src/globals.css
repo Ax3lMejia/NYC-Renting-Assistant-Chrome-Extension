@@ -1,11 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --primary: #bfa094;
-    --secondary: #453731;
+    --cream: #F4EDDD;
+    --ink: #14110D;
+    --accent: #E84A1F;
+    --sage: #4D6B47;
   }
 
   body {
@@ -26,6 +30,13 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-primary-100 rounded-full hover:bg-primary-200 transition-colors;
+  }
+
+  .hide-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scroll {
+    scrollbar-width: none;
   }
 }
 

@@ -1,8 +1,6 @@
 import React from 'react';
-import { AlertTriangle, Info } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '../ui/Card';
-import { Heading, Text } from '../ui/Typography';
-import { Badge } from '../ui/Badge';
+import { SectionCard } from '../ui/SectionCard';
+import { EmptyState } from '../ui/EmptyState';
 
 interface ViolationSummaryProps {
   violations: number | null;
@@ -13,59 +11,69 @@ interface ViolationSummaryProps {
 }
 
 export const ViolationSummary: React.FC<ViolationSummaryProps> = ({
-  violations,
-  dobViolations,
-  ecbViolations,
-  openEcbViolations,
-  isLoading,
+  violations, dobViolations, ecbViolations, openEcbViolations, isLoading,
 }) => {
+  const total = (violations ?? 0) + (dobViolations ?? 0) + (ecbViolations ?? 0);
+  const isHigh = total > 15;
+  const isMedium = total > 5;
+  const isEmpty = violations === null && dobViolations === null && ecbViolations === null;
+
+  const severity: 'low' | 'med' | 'high' = isHigh ? 'high' : isMedium ? 'med' : 'low';
+  const headline = isEmpty
+    ? 'No violation records found'
+    : total === 0
+    ? '0 open violations'
+    : `${total} total violation${total === 1 ? '' : 's'}`;
+
   return (
-    <Card>
-      <CardHeader className="flex items-center space-x-2 py-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600" />
-        <Heading level={4}>Building Violations</Heading>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
-            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
-            <div className="h-8 w-full bg-primary-100/50 animate-pulse rounded-lg" />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Text weight="medium">HPD Maintenance Violations</Text>
-              <Badge variant={violations && violations > 10 ? 'error' : 'warning'}>
-                {violations ?? 0}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <Text weight="medium">DOB Violations</Text>
-              <Badge variant={dobViolations && dobViolations > 5 ? 'error' : 'warning'}>
-                {dobViolations ?? 0}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <Text weight="medium">ECB Penalty Violations</Text>
-              <div className="flex items-center gap-2">
-                {openEcbViolations !== null && openEcbViolations > 0 && (
-                  <Badge variant="error">{openEcbViolations} open</Badge>
-                )}
-                <Badge variant={ecbViolations && ecbViolations > 5 ? 'error' : 'warning'}>
-                  {ecbViolations ?? 0}
-                </Badge>
+    <SectionCard
+      emoji="📋"
+      subjectName="Compliance"
+      headline={headline}
+      severity={severity}
+      isLoading={isLoading}
+    >
+      {isEmpty ? (
+        <EmptyState
+          message="No violation records found"
+          submessage="HPD, DOB, and ECB returned no violations for this address"
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2 text-center mb-2">
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className={`text-xl font-bold font-serif tabular-nums ${violations && violations > 10 ? 'text-red-600' : 'text-primary-950'}`}>
+                {violations ?? '—'}
               </div>
+              <div className="text-xs text-primary-400 mt-0.5">HPD</div>
             </div>
-            <div className="flex items-start space-x-2 p-3 bg-primary-50 rounded-lg border border-primary-100">
-              <Info className="h-4 w-4 text-primary-600 mt-0.5 shrink-0" />
-              <Text size="xs" className="text-primary-600 italic leading-snug">
-                HPD: maintenance code infractions. DOB: structural/safety issues. ECB: penalty violations with fines issued by the Environmental Control Board.
-              </Text>
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className={`text-xl font-bold font-serif tabular-nums ${dobViolations && dobViolations > 5 ? 'text-red-600' : 'text-primary-950'}`}>
+                {dobViolations ?? '—'}
+              </div>
+              <div className="text-xs text-primary-400 mt-0.5">DOB</div>
+            </div>
+            <div className="bg-primary-50/70 rounded-lg py-2.5">
+              <div className={`text-xl font-bold font-serif tabular-nums ${ecbViolations && ecbViolations > 5 ? 'text-red-600' : 'text-primary-950'}`}>
+                {ecbViolations ?? '—'}
+              </div>
+              <div className="text-xs text-primary-400 mt-0.5">ECB</div>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {(openEcbViolations ?? 0) > 0 && (
+            <div className="flex gap-1.5">
+              <span className="text-[10px] bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-md font-medium">
+                {openEcbViolations} ECB open
+              </span>
+            </div>
+          )}
+
+          <p className="text-xs text-primary-400 mt-2 leading-relaxed">
+            HPD: maintenance · DOB: structural/safety · ECB: penalty fines
+          </p>
+        </>
+      )}
+    </SectionCard>
   );
 };

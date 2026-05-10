@@ -1,28 +1,79 @@
 import { ExtensionMessage, ExtensionResponse } from '../types/api';
 import { CacheManager } from './cacheManager';
 import { ApiClient } from './apiClient';
+import { AuthHandler } from './authHandler';
+import { BookmarkHandler } from './bookmarkHandler';
 
 export class MessageBroker {
   static init() {
     chrome.runtime.onMessage.addListener((
       request: ExtensionMessage,
-      sender: chrome.runtime.MessageSender,
-      sendResponse: (response: ExtensionResponse) => void
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response: any) => void
     ) => {
-      console.log('Background received message:', request);
+      console.log('Background received message:', request.type);
 
       if (request.type === 'GET_BUILDING_DATA') {
         this.handleGetBuildingData(request.address).then(sendResponse);
-        return true; // keep the message channel open for async response
+        return true;
       }
 
-      return false; // not handled
+      if (request.type === 'SIGN_IN_EMAIL') {
+        AuthHandler.signInEmail(request.email, request.password).then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'SIGN_UP_EMAIL') {
+        AuthHandler.signUp(request.email, request.password).then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'SIGN_IN_GOOGLE') {
+        AuthHandler.signInGoogle().then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'SIGN_OUT') {
+        AuthHandler.signOut().then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'GET_AUTH_STATE') {
+        AuthHandler.getAuthState().then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'ADD_BOOKMARK') {
+        BookmarkHandler.addBookmark(
+          request.address,
+          request.listingUrl,
+          request.buildingData,
+          request.notes
+        ).then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'REMOVE_BOOKMARK') {
+        BookmarkHandler.removeBookmark(request.bookmarkId).then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'GET_BOOKMARKS') {
+        BookmarkHandler.getBookmarks().then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'UPDATE_BOOKMARK_NOTES') {
+        BookmarkHandler.updateNotes(request.bookmarkId, request.notes).then(sendResponse);
+        return true;
+      }
+
+      return false;
     });
   }
 
   private static async handleGetBuildingData(address: string): Promise<ExtensionResponse> {
     try {
-      // 1. check cache first
       const cachedData = await CacheManager.get(address);
       if (cachedData) {
         console.log('Cache hit for:', address);
@@ -30,35 +81,28 @@ export class MessageBroker {
       }
 
       console.log('Cache miss for:', address, 'Fetching from APIs...');
-
-      // 2. fetch from apis
       const { data, errors } = await ApiClient.fetchBuildingData(address);
-
-      // 3. store in cache (even if partial data, to prevent hammering failing apis)
-      // only cache if we at least got some data back, or if we want to cache negative results too
       await CacheManager.set(address, data);
 
-      // 4. return result
       if (errors.length > 0) {
         console.warn('API Errors encountered:', errors);
         const hasAnyData = data.complaints !== null || data.violations !== null ||
           data.dobViolations !== null || data.ecbViolations !== null ||
           data.dobComplaints !== null || data.serviceRequests !== null ||
-          data.permits !== null || data.bedbugReports !== null || data.rodentInspections !== null;
+          data.bedbugReports !== null || data.rodentInspections !== null;
         return {
           status: hasAnyData ? 'partial' : 'error',
           data,
-          errors
+          errors,
         };
       }
 
       return { status: 'success', data };
-
     } catch (err: any) {
       console.error('Unhandled error in MessageBroker:', err);
       return {
         status: 'error',
-        errors: [{ source: 'Background Worker', message: err.message || 'Internal processing error' }]
+        errors: [{ source: 'Background Worker', message: err.message || 'Internal processing error' }],
       };
     }
   }

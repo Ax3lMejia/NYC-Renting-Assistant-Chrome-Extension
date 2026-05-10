@@ -3,12 +3,12 @@ import { BuildingData, ExtensionMessage, ExtensionResponse } from '../types/api'
 
 export function useExtensionData(address: string | null) {
   const [data, setData] = useState<BuildingData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(!!address);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!address) {
-      setIsLoading(true);
+      setIsLoading(false);
       return;
     }
 
@@ -37,8 +37,6 @@ export function useExtensionData(address: string | null) {
           dobViolations: 3,
           ecbViolations: 5,
           openEcbViolations: 1,
-          permits: 12,
-          activePermits: 2,
           bedbugReports: 3,
           bedbugDetails: [
             { year: 2023, infested: 2, eradicated: 2 },
@@ -47,6 +45,8 @@ export function useExtensionData(address: string | null) {
           rodentInspections: 5,
           rodentFailures: 2,
           rentEstimate: null,
+          crimeData: { felony: 18, misdemeanor: 65, violation: 40 },
+          safetyScore: null,
           lastUpdated: Date.now()
         });
         setIsLoading(false);

@@ -1,39 +1,53 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
-import { AddressTracker } from './components/features/AddressTracker';
 import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
-import { PermitSummary } from './components/features/PermitSummary';
 import { PestSummary } from './components/features/PestSummary';
+import { SafetySummary } from './components/features/SafetySummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
-
+import { calculateBuildingGrade } from './utils/buildingGrade';
 
 type AppProps = {
   scrapedAddress: string | null;
 };
 
 function App({ scrapedAddress }: AppProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const address = scrapedAddress;
+
   const { data, isLoading, error } = useExtensionData(address);
 
   const [settings, setSettings] = useState({
     showComplaints: true,
     showViolations: true,
-    showPermits: true,
     showPestData: true,
     showRentEstimate: true,
+    showSafety: true,
   });
 
   const handleToggle = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const grade = !isLoading && data ? calculateBuildingGrade(data) : null;
+
+  if (!scrapedAddress) return null;
+
   return (
-    <Sidebar isOpen={isOpen} onClose={() => setIsOpen(!isOpen)}>
-      <AddressTracker address={address} isLoading={isLoading} />
+    <Sidebar
+      showSettings={showSettings}
+      onToggleSettings={() => setShowSettings(v => !v)}
+      address={address}
+      isLoading={isLoading}
+      grade={grade}
+      buildingData={data}
+      listingUrl={typeof window !== 'undefined' ? window.location.href : undefined}
+    >
+      {showSettings && (
+        <SettingsPanel settings={settings} onToggle={handleToggle} />
+      )}
 
       {settings.showComplaints && (
         <ComplaintSummary
@@ -44,6 +58,8 @@ function App({ scrapedAddress }: AppProps) {
           serviceRequests={data?.serviceRequests ?? null}
           openServiceRequests={data?.openServiceRequests ?? null}
           isLoading={isLoading}
+          bbl={data?.bbl ?? null}
+          address={data?.address ?? null}
         />
       )}
 
@@ -53,14 +69,6 @@ function App({ scrapedAddress }: AppProps) {
           dobViolations={data?.dobViolations ?? null}
           ecbViolations={data?.ecbViolations ?? null}
           openEcbViolations={data?.openEcbViolations ?? null}
-          isLoading={isLoading}
-        />
-      )}
-
-      {settings.showPermits && (
-        <PermitSummary
-          permits={data?.permits ?? null}
-          activePermits={data?.activePermits ?? null}
           isLoading={isLoading}
         />
       )}
@@ -75,15 +83,20 @@ function App({ scrapedAddress }: AppProps) {
         />
       )}
 
+      {settings.showSafety && (
+        <SafetySummary
+          crimeData={data?.crimeData ?? null}
+          isLoading={isLoading}
+        />
+      )}
+
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-sm">
+        <div className="bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 text-xs">
           {error}
         </div>
       )}
-
-      <SettingsPanel settings={settings} onToggle={handleToggle} />
     </Sidebar>
   );
-};
+}
 
 export default App;
