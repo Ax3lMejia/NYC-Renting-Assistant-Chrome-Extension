@@ -5,7 +5,8 @@
   "description": "Aggregate building info and complaints for NYC rental listings.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "identity"
   ],
   "host_permissions": [
     "https://*.zillow.com/*",
