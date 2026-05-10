@@ -115,3 +115,10 @@ if (supportedDomains.some(domain => window.location.hostname.includes(domain))) 
   init();
   watchForPageChanges();
 }
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === 'GET_CURRENT_ADDRESS') {
+    sendResponse({ address: currentAddress });
+  }
+  return false;
+});

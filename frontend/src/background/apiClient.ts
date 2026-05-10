@@ -1,8 +1,10 @@
 import { BuildingData, BedbugReport, ApiError } from '../types/api';
 import { RateLimiter } from './rateLimiter';
+import { calculateSafetyScore } from '../utils/neighborhoodSafety';
 
 const GEOCLIENT_DOMAIN = 'api.nyc.gov';
 const AUGRENTED_DOMAIN = 'augrented.com';
+const NYPD_DOMAIN = 'data.cityofnewyork.us';
 
 const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
@@ -13,6 +15,7 @@ const ENDPOINTS = {
   augrentedDobComplaints: 'https://augrented.com/api/nyc/nyc/building/dob-complaints',
   augrentedEcbViolations: 'https://augrented.com/api/nyc/nyc/building/ecb-violations',
   augrentedServiceRequests: 'https://augrented.com/api/nyc/nyc/building/service-requests',
+  nypd: 'https://data.cityofnewyork.us/resource/5uac-w243.json',
 };
 
 export class ApiClient {
@@ -62,7 +65,7 @@ export class ApiClient {
   }
 
   // Resolves a street address to a NYC BBL and BIN using the NYC Geoclient V2 API.
-  private static async geocodeAddress(address: string): Promise<{ bbl: string; bin: string } | null> {
+  private static async geocodeAddress(address: string): Promise<{ bbl: string; bin: string; lat: number | null; lng: number | null } | null> {
     const components = this.parseAddressComponents(address);
     if (!components) return null;
 
@@ -84,7 +87,9 @@ export class ApiClient {
       const bbl = data?.address?.bbl;
       const bin = data?.address?.buildingIdentificationNumber ?? data?.address?.bin;
       if (!bbl) return null;
-      return { bbl: String(bbl), bin: bin ? String(bin) : String(bbl) };
+      const lat = data?.address?.latitude ? Number(data.address.latitude) : null;
+      const lng = data?.address?.longitude ? Number(data.address.longitude) : null;
+      return { bbl: String(bbl), bin: bin ? String(bin) : String(bbl), lat, lng };
     } catch {
       return null;
     }
@@ -111,6 +116,8 @@ export class ApiClient {
       rodentInspections: null,
       rodentFailures: null,
       rentEstimate: null,
+      crimeData: null,
+      safetyScore: null,
       lastUpdated: Date.now(),
     };
 
@@ -122,7 +129,7 @@ export class ApiClient {
 
     result.bbl = geocoded.bbl;
 
-    const { bbl, bin } = geocoded;
+    const { bbl, bin, lat, lng } = geocoded;
 
     const searchParams = new URLSearchParams({
       bbl, bin,
@@ -139,6 +146,7 @@ export class ApiClient {
       dobComplaintsResult,
       ecbResult,
       serviceRequestsResult,
+      nypResult,
     ] = await Promise.allSettled([
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedSearch}?${searchParams}`)
@@ -161,6 +169,13 @@ export class ApiClient {
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedServiceRequests}?${new URLSearchParams({ bbl, limit: '100', status: 'ALL' })}`)
       ),
+      lat !== null && lng !== null
+        ? RateLimiter.enqueue(NYPD_DOMAIN, () =>
+            this.fetchJson(
+              `${ENDPOINTS.nypd}?$where=within_circle(lat_lon,${lat},${lng},400) AND cmplnt_fr_dt >= '${new Date().getFullYear()}-01-01T00:00:00.000'&$limit=1000&$select=law_cat_cd`
+            )
+          )
+        : Promise.resolve(null),
     ]);
 
     // HPD housing complaints
@@ -237,6 +252,23 @@ export class ApiClient {
       ).length;
     } else {
       errors.push({ source: 'Service Requests', message: serviceRequestsResult.reason?.message || 'Failed to fetch service requests.' });
+    }
+
+    // NYPD neighborhood crime
+    if (nypResult.status === 'fulfilled' && Array.isArray(nypResult.value)) {
+      const records: any[] = nypResult.value;
+      const crimeData = { felony: 0, misdemeanor: 0, violation: 0 };
+      for (const r of records) {
+        const cat = (r.law_cat_cd ?? '').toUpperCase();
+        if (cat === 'FELONY') crimeData.felony++;
+        else if (cat === 'MISDEMEANOR') crimeData.misdemeanor++;
+        else if (cat === 'VIOLATION') crimeData.violation++;
+      }
+      result.crimeData = crimeData;
+      const { score } = calculateSafetyScore(crimeData);
+      result.safetyScore = score;
+    } else if (nypResult.status === 'rejected') {
+      errors.push({ source: 'NYPD', message: nypResult.reason?.message || 'Failed to fetch crime data.' });
     }
 
     return { data: result, errors };

@@ -78,3 +78,23 @@ export function calculateBuildingGrade(data: BuildingData | null): GradeResult |
 
   return { grade, label: label[grade], points };
 }
+
+export function getGradeBlurb(grade: Grade): string {
+  switch (grade) {
+    case 'A': return 'No open violations, clean pest history. Worth a tour.';
+    case 'B': return 'Minor issues, generally well-maintained. A solid pick.';
+    case 'C': return 'Some violations and complaints on record. Tour with questions.';
+    case 'D': return 'Multiple issues flagged. Negotiate hard or walk away.';
+    case 'F': return 'Serious violations and active pest history. Proceed with caution.';
+  }
+}
+
+export function getGradeQuote(grade: Grade): string {
+  switch (grade) {
+    case 'A': return "I'm doing pretty good!";
+    case 'B': return "Not bad, all things considered.";
+    case 'C': return "I'm a bit rough around the edges.";
+    case 'D': return "It's been a tough few years.";
+    case 'F': return "I've had better years.";
+  }
+}

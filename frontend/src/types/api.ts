@@ -4,31 +4,32 @@ export interface BedbugReport {
   eradicated: number;
 }
 
+export interface CrimeData {
+  felony: number;
+  misdemeanor: number;
+  violation: number;
+}
+
 export interface BuildingData {
   address: string;
   bbl: string | null;
-  // HPD housing complaints
   complaints: number | null;
   complaintSeverity: 'low' | 'medium' | 'high' | null;
-  // DOB complaints (311-style filed with Dept of Buildings)
   dobComplaints: number | null;
   openDobComplaints: number | null;
-  // 311 service requests
   serviceRequests: number | null;
   openServiceRequests: number | null;
-  // HPD maintenance code violations
   violations: number | null;
-  // DOB structural/safety violations
   dobViolations: number | null;
-  // ECB penalty violations
   ecbViolations: number | null;
   openEcbViolations: number | null;
-  // Pest
   bedbugReports: number | null;
   bedbugDetails: BedbugReport[] | null;
   rodentInspections: number | null;
   rodentFailures: number | null;
   rentEstimate: number | null;
+  crimeData: CrimeData | null;
+  safetyScore: number | null;
   lastUpdated: number;
 }
 
@@ -37,12 +38,52 @@ export interface ApiError {
   message: string;
 }
 
-export interface ExtensionMessage {
-  type: 'GET_BUILDING_DATA';
-  address: string;
-  city?: string;
-  zipcode?: string;
+// --- Auth types ---
+
+export interface User {
+  id: string;
+  email: string | null;
 }
+
+export interface AuthResponse {
+  status: 'success' | 'error';
+  user?: User | null;
+  message?: string;
+}
+
+// --- Bookmark types ---
+
+export interface Bookmark {
+  id: string;
+  user_id: string;
+  address: string;
+  listing_url: string;
+  building_data: BuildingData | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface BookmarkResponse {
+  status: 'success' | 'error';
+  bookmarks?: Bookmark[];
+  bookmark?: Bookmark;
+  message?: string;
+}
+
+// --- Message union ---
+
+export type ExtensionMessage =
+  | { type: 'GET_BUILDING_DATA'; address: string; city?: string; zipcode?: string }
+  | { type: 'GET_CURRENT_ADDRESS' }
+  | { type: 'SIGN_IN_EMAIL'; email: string; password: string }
+  | { type: 'SIGN_UP_EMAIL'; email: string; password: string }
+  | { type: 'SIGN_IN_GOOGLE' }
+  | { type: 'SIGN_OUT' }
+  | { type: 'GET_AUTH_STATE' }
+  | { type: 'ADD_BOOKMARK'; address: string; listingUrl: string; buildingData: BuildingData | null; notes?: string }
+  | { type: 'REMOVE_BOOKMARK'; bookmarkId: string }
+  | { type: 'GET_BOOKMARKS' }
+  | { type: 'UPDATE_BOOKMARK_NOTES'; bookmarkId: string; notes: string };
 
 export interface ExtensionResponse {
   status: 'success' | 'partial' | 'error';
