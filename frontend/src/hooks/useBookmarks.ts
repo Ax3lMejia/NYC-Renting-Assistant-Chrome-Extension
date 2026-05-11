@@ -28,6 +28,15 @@ export function useBookmarks(enabled = true) {
     else setIsLoading(false);
   }, [enabled, load]);
 
+  useEffect(() => {
+    if (!enabled || !chrome?.storage?.local) return;
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('NYC_RA_BOOKMARKS_UPDATED' in changes) load();
+    };
+    chrome.storage.local.onChanged.addListener(listener);
+    return () => chrome.storage.local.onChanged.removeListener(listener);
+  }, [enabled, load]);
+
   const addBookmark = useCallback(async (
     address: string,
     listingUrl: string,
