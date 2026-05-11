@@ -1,3 +1,5 @@
+import { parsePriceText } from '../../utils/priceParser';
+
 export function isApartmentsListingPage(): boolean {
     if (!window.location.hostname.includes('apartments.com')) return false;
     // search result pages: /new-york-ny/ or /new-york-ny/1/?... (1-2 segments, numeric page suffix)
@@ -159,3 +161,24 @@ export function isApartmentsListingPage(): boolean {
       .replace(/\s+/g, ' ')
       .trim();
   }
+
+export function getApartmentsPrice(): number | null {
+  const selectors = [
+    '.rentInfoDetail',
+    '.js-rateSection',
+    '.rentRangeDetail',
+    '[class*="rentInfo"]',
+    '[class*="priceRange"]',
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const text = el?.textContent?.trim();
+    if (text) {
+      const price = parsePriceText(text);
+      if (price) return price;
+    }
+  }
+
+  return null;
+}
