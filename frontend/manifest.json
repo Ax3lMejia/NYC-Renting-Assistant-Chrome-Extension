@@ -6,7 +6,8 @@
   "permissions": [
     "storage",
     "activeTab",
-    "identity"
+    "identity",
+    "alarms"
   ],
   "host_permissions": [
     "https://*.zillow.com/*",
