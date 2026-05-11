@@ -60,6 +60,7 @@ export interface Bookmark {
   listing_url: string;
   building_data: BuildingData | null;
   notes: string | null;
+  listed_price: number | null;
   created_at: string;
 }
 
@@ -80,7 +81,7 @@ export type ExtensionMessage =
   | { type: 'SIGN_IN_GOOGLE' }
   | { type: 'SIGN_OUT' }
   | { type: 'GET_AUTH_STATE' }
-  | { type: 'ADD_BOOKMARK'; address: string; listingUrl: string; buildingData: BuildingData | null; notes?: string }
+  | { type: 'ADD_BOOKMARK'; address: string; listingUrl: string; buildingData: BuildingData | null; notes?: string; listedPrice?: number | null }
   | { type: 'REMOVE_BOOKMARK'; bookmarkId: string }
   | { type: 'GET_BOOKMARKS' }
   | { type: 'UPDATE_BOOKMARK_NOTES'; bookmarkId: string; notes: string };
