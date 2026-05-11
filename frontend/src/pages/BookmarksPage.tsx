@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trash2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useBookmarks } from '../hooks/useBookmarks';
@@ -6,6 +6,24 @@ import { AuthPanel } from '../components/features/AuthPanel';
 import { calculateBuildingGrade } from '../utils/buildingGrade';
 import { Bookmark, BuildingData } from '../types/api';
 import { ComparisonModal } from '../components/features/ComparisonModal';
+
+type SortBy = 'newest' | 'oldest' | 'grade_best' | 'grade_worst' | 'price_asc' | 'price_desc';
+type FilterSite = 'all' | 'Zillow' | 'StreetEasy' | 'Apartments.com';
+
+const GRADE_ORDER: Record<string, number> = { A: 5, B: 4, C: 3, D: 2, F: 1 };
+
+type SiteInfo = { name: FilterSite | string; color: string; bg: string };
+
+function getSiteInfo(url: string): SiteInfo {
+  if (url.includes('zillow.com')) return { name: 'Zillow', color: '#1277E1', bg: 'rgba(18,119,225,.12)' };
+  if (url.includes('streeteasy.com')) return { name: 'StreetEasy', color: '#00857D', bg: 'rgba(0,133,125,.12)' };
+  if (url.includes('apartments.com')) return { name: 'Apartments.com', color: '#C4572A', bg: 'rgba(196,87,42,.12)' };
+  try {
+    return { name: new URL(url).hostname.replace(/^www\./, ''), color: '#8a8377', bg: 'rgba(20,17,13,.08)' };
+  } catch {
+    return { name: 'Listing', color: '#8a8377', bg: 'rgba(20,17,13,.08)' };
+  }
+}
 
 const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{ minHeight: '100vh', background: '#F4EDDD', fontFamily: 'Geist, system-ui, sans-serif', color: '#14110D' }}>
@@ -39,6 +57,7 @@ const BookmarkCard: React.FC<{
   isSelected: boolean;
   onToggleSelect: () => void;
 }> = ({ bookmark, onRemove, onUpdateNotes, compareMode, isSelected, onToggleSelect }) => {
+  const site = getSiteInfo(bookmark.listing_url);
   const grade = calculateBuildingGrade(bookmark.building_data);
   const gradeColor = !grade ? '#8a8377'
     : grade.grade === 'A' || grade.grade === 'B' ? '#4D6B47'
@@ -113,8 +132,16 @@ const BookmarkCard: React.FC<{
               ${bookmark.listed_price.toLocaleString()} / mo
             </div>
           )}
-          <div style={{ fontSize: 10, color: 'rgba(20,17,13,0.4)', marginTop: 2 }}>
-            Saved {new Date(bookmark.created_at).toLocaleDateString()}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+            <div style={{ fontSize: 10, color: 'rgba(20,17,13,0.4)' }}>
+              Saved {new Date(bookmark.created_at).toLocaleDateString()}
+            </div>
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+              color: site.color, background: site.bg, borderRadius: 4, padding: '2px 6px',
+            }}>
+              {site.name}
+            </span>
           </div>
         </div>
       </div>
@@ -202,6 +229,41 @@ export const BookmarksPage: React.FC = () => {
   const [compareMode, setCompareMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showModal, setShowModal] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
+  const [filterSite, setFilterSite] = useState<FilterSite>('all');
+
+  const displayedBookmarks = useMemo(() => {
+    let list = [...bookmarks];
+    if (filterSite !== 'all') {
+      list = list.filter(b => getSiteInfo(b.listing_url).name === filterSite);
+    }
+    list.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (sortBy === 'grade_best') {
+        const ga = calculateBuildingGrade(a.building_data);
+        const gb = calculateBuildingGrade(b.building_data);
+        return (GRADE_ORDER[gb?.grade ?? ''] ?? 0) - (GRADE_ORDER[ga?.grade ?? ''] ?? 0);
+      }
+      if (sortBy === 'grade_worst') {
+        const ga = calculateBuildingGrade(a.building_data);
+        const gb = calculateBuildingGrade(b.building_data);
+        return (GRADE_ORDER[ga?.grade ?? ''] ?? 0) - (GRADE_ORDER[gb?.grade ?? ''] ?? 0);
+      }
+      if (sortBy === 'price_asc') {
+        if (a.listed_price === null) return 1;
+        if (b.listed_price === null) return -1;
+        return a.listed_price - b.listed_price;
+      }
+      if (sortBy === 'price_desc') {
+        if (a.listed_price === null) return 1;
+        if (b.listed_price === null) return -1;
+        return b.listed_price - a.listed_price;
+      }
+      return 0;
+    });
+    return list;
+  }, [bookmarks, sortBy, filterSite]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -267,7 +329,9 @@ export const BookmarksPage: React.FC = () => {
               My Bookmarks
             </div>
             <div style={{ fontSize: 12, color: '#8a8377', marginTop: 3 }}>
-              {user.email} · {bookmarks.length} saved
+              {user.email} · {filterSite === 'all'
+                ? `${bookmarks.length} saved`
+                : `${displayedBookmarks.length} of ${bookmarks.length} saved`}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -297,6 +361,68 @@ export const BookmarksPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {!compareMode && bookmarks.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 20 }}>
+            {/* Sort buttons */}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {([
+                { key: 'newest', label: 'Newest' },
+                { key: 'oldest', label: 'Oldest' },
+                { key: 'grade_best', label: 'Best grade' },
+                { key: 'grade_worst', label: 'Worst grade' },
+                { key: 'price_asc', label: 'Price ↑' },
+                { key: 'price_desc', label: 'Price ↓' },
+              ] as { key: SortBy; label: string }[]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  style={{
+                    fontSize: 11, fontWeight: sortBy === key ? 700 : 500,
+                    padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                    border: sortBy === key ? '1.5px solid #5C3D2E' : '1px solid rgba(20,17,13,.15)',
+                    background: sortBy === key ? '#5C3D2E' : '#fff',
+                    color: sortBy === key ? '#F4EDDD' : '#8a8377',
+                    fontFamily: 'Geist, system-ui, sans-serif',
+                    transition: 'background .12s, color .12s',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Divider */}
+            <div style={{ width: 1, height: 20, background: 'rgba(20,17,13,.12)', flexShrink: 0 }} />
+            {/* Site filter */}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {([
+                { key: 'all', label: 'All sites', color: '#5C3D2E', activeBg: '#5C3D2E' },
+                { key: 'Zillow', label: 'Zillow', color: '#1277E1', activeBg: 'rgba(18,119,225,.12)' },
+                { key: 'StreetEasy', label: 'StreetEasy', color: '#00857D', activeBg: 'rgba(0,133,125,.12)' },
+                { key: 'Apartments.com', label: 'Apartments.com', color: '#C4572A', activeBg: 'rgba(196,87,42,.12)' },
+              ] as { key: FilterSite; label: string; color: string; activeBg: string }[]).map(({ key, label, color, activeBg }) => {
+                const active = filterSite === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setFilterSite(key)}
+                    style={{
+                      fontSize: 11, fontWeight: active ? 700 : 500,
+                      padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                      border: active ? `1.5px solid ${color}` : '1px solid rgba(20,17,13,.15)',
+                      background: active ? (key === 'all' ? '#5C3D2E' : activeBg) : '#fff',
+                      color: active ? (key === 'all' ? '#F4EDDD' : color) : '#8a8377',
+                      fontFamily: 'Geist, system-ui, sans-serif',
+                      transition: 'background .12s, color .12s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {compareMode && (
           <div style={{
@@ -352,9 +478,13 @@ export const BookmarksPage: React.FC = () => {
             No bookmarks yet.<br />
             Visit a listing on Zillow, StreetEasy, or Apartments.com and click Save.
           </div>
+        ) : displayedBookmarks.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#8a8377', fontSize: 13, lineHeight: 1.6 }}>
+            No {filterSite} bookmarks saved yet.
+          </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            {bookmarks.map(b => (
+            {displayedBookmarks.map(b => (
               <BookmarkCard
                 key={b.id}
                 bookmark={b}
