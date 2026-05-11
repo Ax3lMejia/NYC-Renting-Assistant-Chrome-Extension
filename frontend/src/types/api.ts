@@ -81,6 +81,8 @@ export type ExtensionMessage =
   | { type: 'SIGN_IN_GOOGLE' }
   | { type: 'SIGN_OUT' }
   | { type: 'GET_AUTH_STATE' }
+  | { type: 'RESET_PASSWORD'; email: string }
+  | { type: 'DELETE_ACCOUNT' }
   | { type: 'ADD_BOOKMARK'; address: string; listingUrl: string; buildingData: BuildingData | null; notes?: string; listedPrice?: number | null }
   | { type: 'REMOVE_BOOKMARK'; bookmarkId: string }
   | { type: 'GET_BOOKMARKS' }

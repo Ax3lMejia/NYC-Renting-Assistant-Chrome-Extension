@@ -25,15 +25,16 @@ function getSiteInfo(url: string): SiteInfo {
   }
 }
 
-const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const PageShell: React.FC<{ children: React.ReactNode; headerRight?: React.ReactNode }> = ({ children, headerRight }) => (
   <div style={{ minHeight: '100vh', background: '#F4EDDD', fontFamily: 'Geist, system-ui, sans-serif', color: '#14110D' }}>
-    <div style={{ background: '#C49F6D', padding: '14px 24px' }}>
+    <div style={{ background: '#C49F6D', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <span style={{
         fontFamily: 'Geist Mono, monospace',
         fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.65,
       }}>
         NYC RENTING ASSISTANT
       </span>
+      {headerRight}
     </div>
     {children}
   </div>
@@ -223,7 +224,7 @@ const BookmarkCard: React.FC<{
 };
 
 export const BookmarksPage: React.FC = () => {
-  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { user, isLoading: authLoading, signOut, deleteAccount } = useAuth();
   const { bookmarks, isLoading, removeBookmark, updateNotes } = useBookmarks(!authLoading && !!user);
 
   const [compareMode, setCompareMode] = useState(false);
@@ -231,6 +232,9 @@ export const BookmarksPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [filterSite, setFilterSite] = useState<FilterSite>('all');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const displayedBookmarks = useMemo(() => {
     let list = [...bookmarks];
@@ -292,6 +296,15 @@ export const BookmarksPage: React.FC = () => {
     });
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    const err = await deleteAccount();
+    setIsDeleting(false);
+    if (err) setDeleteError(err);
+    else setShowDeleteConfirm(false);
+  };
+
   if (authLoading) {
     return (
       <PageShell>
@@ -317,8 +330,35 @@ export const BookmarksPage: React.FC = () => {
     );
   }
 
+  const headerButtons = (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <button
+        onClick={() => { setShowDeleteConfirm(true); setDeleteError(null); }}
+        style={{
+          fontSize: 11, fontWeight: 600, color: '#E84A1F',
+          background: '#fff', border: '1.5px solid rgba(232,74,31,0.4)',
+          borderRadius: 7, padding: '5px 12px', cursor: 'pointer',
+          fontFamily: 'Geist, system-ui, sans-serif',
+        }}
+      >
+        Delete account
+      </button>
+      <button
+        onClick={signOut}
+        style={{
+          fontSize: 11, fontWeight: 600, color: '#14110D',
+          background: '#fff', border: '1.5px solid rgba(20,17,13,0.2)',
+          borderRadius: 7, padding: '5px 12px', cursor: 'pointer',
+          fontFamily: 'Geist, system-ui, sans-serif',
+        }}
+      >
+        Sign out
+      </button>
+    </div>
+  );
+
   return (
-    <PageShell>
+    <PageShell headerRight={headerButtons}>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: compareMode ? 0 : 28 }}>
           <div>
@@ -334,32 +374,19 @@ export const BookmarksPage: React.FC = () => {
                 : `${displayedBookmarks.length} of ${bookmarks.length} saved`}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {!compareMode && (
-              <button
-                onClick={() => setCompareMode(true)}
-                style={{
-                  fontSize: 12, color: '#5C3D2E', background: 'none',
-                  border: '1px solid rgba(92,61,46,.3)', borderRadius: 8,
-                  padding: '7px 14px', cursor: 'pointer', fontWeight: 600,
-                  fontFamily: 'Geist, system-ui, sans-serif',
-                }}
-              >
-                ⇄ Compare listings
-              </button>
-            )}
+          {!compareMode && (
             <button
-              onClick={signOut}
+              onClick={() => setCompareMode(true)}
               style={{
-                fontSize: 12, color: '#8a8377',
-                background: 'none', border: '1px solid rgba(20,17,13,0.15)',
-                borderRadius: 8, padding: '7px 14px', cursor: 'pointer',
+                fontSize: 12, color: '#5C3D2E', background: 'none',
+                border: '1px solid rgba(92,61,46,.3)', borderRadius: 8,
+                padding: '7px 14px', cursor: 'pointer', fontWeight: 600,
                 fontFamily: 'Geist, system-ui, sans-serif',
               }}
             >
-              Sign out
+              ⇄ Compare listings
             </button>
-          </div>
+          )}
         </div>
 
         {!compareMode && bookmarks.length > 0 && (
@@ -503,6 +530,65 @@ export const BookmarksPage: React.FC = () => {
           bookmarks={bookmarks.filter(b => selectedIds.has(b.id))}
           onClose={() => setShowModal(false)}
         />
+      )}
+
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(20,17,13,0.55)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => !isDeleting && setShowDeleteConfirm(false)}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: 16, padding: '28px 28px 24px',
+              maxWidth: 360, width: '90%', boxShadow: '0 12px 40px rgba(20,17,13,0.2)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#14110D', marginBottom: 8 }}>
+              Delete your account?
+            </div>
+            <div style={{ fontSize: 13, color: '#8a8377', lineHeight: 1.6, marginBottom: 20 }}>
+              This permanently deletes your account and all saved bookmarks. This cannot be undone.
+            </div>
+            {deleteError && (
+              <div style={{ fontSize: 11, color: '#E84A1F', marginBottom: 12, lineHeight: 1.3 }}>
+                {deleteError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8,
+                  background: '#F4EDDD', color: '#14110D',
+                  border: '1px solid rgba(20,17,13,0.15)', fontSize: 13, fontWeight: 600,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer', opacity: isDeleting ? 0.5 : 1,
+                  fontFamily: 'Geist, system-ui, sans-serif',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8,
+                  background: '#E84A1F', color: '#fff',
+                  border: 'none', fontSize: 13, fontWeight: 600,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer', opacity: isDeleting ? 0.6 : 1,
+                  fontFamily: 'Geist, system-ui, sans-serif',
+                }}
+              >
+                {isDeleting ? 'Deleting…' : 'Yes, delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </PageShell>
   );

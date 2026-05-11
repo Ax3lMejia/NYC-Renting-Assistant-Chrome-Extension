@@ -43,6 +43,16 @@ export class MessageBroker {
         return true;
       }
 
+      if (request.type === 'RESET_PASSWORD') {
+        AuthHandler.resetPassword(request.email).then(sendResponse);
+        return true;
+      }
+
+      if (request.type === 'DELETE_ACCOUNT') {
+        AuthHandler.deleteAccount().then(sendResponse);
+        return true;
+      }
+
       if (request.type === 'ADD_BOOKMARK') {
         BookmarkHandler.addBookmark(
           request.address,
