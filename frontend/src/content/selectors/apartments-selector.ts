@@ -163,12 +163,15 @@ export function isApartmentsListingPage(): boolean {
   }
 
 export function getApartmentsPrice(): number | null {
+  // JSON-LD is the most reliable — apartments.com embeds schema.org structured data
+  const ldPrice = getApartmentsPriceFromJsonLd();
+  if (ldPrice) return ldPrice;
+
+  // Targeted DOM selectors — only query direct text nodes to avoid grabbing unrelated child text
   const selectors = [
     '.rentInfoDetail',
     '.js-rateSection',
     '.rentRangeDetail',
-    '[class*="rentInfo"]',
-    '[class*="priceRange"]',
   ];
 
   for (const selector of selectors) {
@@ -180,5 +183,40 @@ export function getApartmentsPrice(): number | null {
     }
   }
 
+  return null;
+}
+
+function getApartmentsPriceFromJsonLd(): number | null {
+  const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+  for (const script of scripts) {
+    const raw = script.textContent?.trim();
+    if (!raw) continue;
+    try {
+      const data = JSON.parse(raw);
+      const nodes = flattenJsonNodes(data);
+      for (const node of nodes) {
+        // schema.org offers (most specific)
+        const offers = node.offers;
+        if (offers) {
+          const offerList = Array.isArray(offers) ? offers : [offers];
+          for (const offer of offerList) {
+            if (typeof offer?.price === 'number' && offer.price > 0) return offer.price;
+            if (typeof offer?.lowPrice === 'number' && offer.lowPrice > 0) return offer.lowPrice;
+            if (typeof offer?.price === 'string') {
+              const p = parsePriceText(offer.price);
+              if (p) return p;
+            }
+          }
+        }
+        // priceRange string like "$1,500 - $2,800"
+        if (typeof node.priceRange === 'string') {
+          const p = parsePriceText(node.priceRange);
+          if (p) return p;
+        }
+      }
+    } catch {
+      // ignore malformed JSON-LD
+    }
+  }
   return null;
 }

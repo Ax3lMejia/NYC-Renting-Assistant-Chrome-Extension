@@ -37,4 +37,13 @@ describe('parsePriceText', () => {
   it('returns null for negative', () => {
     expect(parsePriceText('-100')).toBeNull();
   });
+
+  it('returns null for text without a dollar sign', () => {
+    expect(parsePriceText('1500')).toBeNull();
+  });
+
+  it('returns null for bedroom/bathroom counts that look numeric', () => {
+    expect(parsePriceText('4 floors')).toBeNull();
+    expect(parsePriceText('1 bed')).toBeNull();
+  });
 });
