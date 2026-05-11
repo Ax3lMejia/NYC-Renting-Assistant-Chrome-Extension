@@ -10,9 +10,10 @@ import { calculateBuildingGrade } from './utils/buildingGrade';
 
 type AppProps = {
   scrapedAddress: string | null;
+  scrapedPrice: number | null;
 };
 
-function App({ scrapedAddress }: AppProps) {
+function App({ scrapedAddress, scrapedPrice }: AppProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const address = scrapedAddress;
@@ -43,6 +44,7 @@ function App({ scrapedAddress }: AppProps) {
       isLoading={isLoading}
       grade={grade}
       buildingData={data}
+      listedPrice={scrapedPrice}
       listingUrl={typeof window !== 'undefined' ? window.location.href : undefined}
     >
       {showSettings && (

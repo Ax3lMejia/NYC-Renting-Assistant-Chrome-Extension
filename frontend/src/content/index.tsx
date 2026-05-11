@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from '../App';
 import cssText from '../globals.css?inline';
-import { getZillowAddress, isZillowListingPage } from './selectors/zillow-selector';
-import { getStreetEasyAddress, isStreetEasyListingPage } from './selectors/streeteasy-selector';
-import { getApartmentsAddress, isApartmentsListingPage } from './selectors/apartments-selector';
+import { getZillowAddress, isZillowListingPage, getZillowPrice } from './selectors/zillow-selector';
+import { getStreetEasyAddress, isStreetEasyListingPage, getStreetEasyPrice } from './selectors/streeteasy-selector';
+import { getApartmentsAddress, isApartmentsListingPage, getApartmentsPrice } from './selectors/apartments-selector';
 
 const rootId = 'nyc-renting-assistant-root';
 
@@ -12,15 +12,25 @@ function detectAddress(): string | null {
   if (window.location.hostname.includes('zillow.com') && isZillowListingPage()) {
     return getZillowAddress();
   }
-
   if (window.location.hostname.includes('streeteasy.com') && isStreetEasyListingPage()) {
     return getStreetEasyAddress();
   }
-
   if (window.location.hostname.includes('apartments.com') && isApartmentsListingPage()) {
     return getApartmentsAddress();
   }
+  return null;
+}
 
+function detectPrice(): number | null {
+  if (window.location.hostname.includes('zillow.com') && isZillowListingPage()) {
+    return getZillowPrice();
+  }
+  if (window.location.hostname.includes('streeteasy.com') && isStreetEasyListingPage()) {
+    return getStreetEasyPrice();
+  }
+  if (window.location.hostname.includes('apartments.com') && isApartmentsListingPage()) {
+    return getApartmentsPrice();
+  }
   return null;
 }
 
@@ -61,14 +71,15 @@ function renderApp() {
   if (!root) return;
 
   currentAddress = detectAddress();
+  const currentPrice = detectPrice();
 
   if (import.meta.env.DEV) {
-    console.log('Scraped address:', currentAddress);
+    console.log('Scraped address:', currentAddress, 'price:', currentPrice);
   }
 
   root.render(
     <React.StrictMode>
-      <App scrapedAddress={currentAddress} />
+      <App scrapedAddress={currentAddress} scrapedPrice={currentPrice} />
     </React.StrictMode>
   );
 }
@@ -81,9 +92,10 @@ function watchForPageChanges() {
     if (newAddress !== currentAddress) {
       currentAddress = newAddress;
       if (root) {
+        const currentPrice = detectPrice();
         root.render(
           <React.StrictMode>
-            <App scrapedAddress={currentAddress} />
+            <App scrapedAddress={currentAddress} scrapedPrice={currentPrice} />
           </React.StrictMode>
         );
       }
@@ -95,12 +107,8 @@ function watchForPageChanges() {
     debounceTimeout = setTimeout(checkAndUpdate, 500);
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
-  // fallback polling for SPA routing
   setInterval(() => {
     if (window.location.href !== currentUrl) {
       currentUrl = window.location.href;

@@ -6,9 +6,10 @@ interface BookmarkButtonProps {
   address: string;
   listingUrl: string;
   buildingData: BuildingData | null;
+  listedPrice?: number | null;
 }
 
-export const BookmarkButton: React.FC<BookmarkButtonProps> = ({ address, listingUrl, buildingData }) => {
+export const BookmarkButton: React.FC<BookmarkButtonProps> = ({ address, listingUrl, buildingData, listedPrice }) => {
   const [bookmarks, setBookmarks] = useState<BookmarkType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,7 +34,7 @@ export const BookmarkButton: React.FC<BookmarkButtonProps> = ({ address, listing
       });
     } else {
       chrome.runtime.sendMessage(
-        { type: 'ADD_BOOKMARK', address, listingUrl, buildingData },
+        { type: 'ADD_BOOKMARK', address, listingUrl, buildingData, listedPrice: listedPrice ?? null },
         (response: BookmarkResponse) => {
           if (response?.status === 'success' && response.bookmark) {
             setBookmarks(prev => [response.bookmark!, ...prev]);
