@@ -6,7 +6,8 @@ export class BookmarkHandler {
     address: string,
     listingUrl: string,
     buildingData: BuildingData | null,
-    notes?: string
+    notes?: string,
+    listedPrice?: number | null
   ): Promise<BookmarkResponse> {
     try {
       const supabase = await getSupabaseClient();
@@ -21,6 +22,7 @@ export class BookmarkHandler {
           listing_url: listingUrl,
           building_data: buildingData,
           notes: notes ?? null,
+          listed_price: listedPrice ?? null,
         })
         .select()
         .single();

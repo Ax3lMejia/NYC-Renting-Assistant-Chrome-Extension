@@ -48,7 +48,8 @@ export class MessageBroker {
           request.address,
           request.listingUrl,
           request.buildingData,
-          request.notes
+          request.notes,
+          request.listedPrice ?? null
         ).then(sendResponse);
         return true;
       }
