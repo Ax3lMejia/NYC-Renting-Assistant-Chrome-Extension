@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, ExternalLink, Bookmark as BookmarkIcon } from 'lucide-react';
+import { ExternalLink, Bookmark as BookmarkIcon } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { AuthPanel } from '../components/features/AuthPanel';
@@ -8,22 +8,40 @@ import { calculateBuildingGrade } from '../utils/buildingGrade';
 import { BuildingData, BookmarkResponse } from '../types/api';
 
 const containerStyle: React.CSSProperties = {
-  width: 340,
+  width: 360,
   background: '#F4EDDD',
   fontFamily: 'Geist, system-ui, sans-serif',
   color: '#14110D',
   minHeight: 200,
 };
 
-const Header: React.FC = () => (
-  <div style={{ background: '#C49F6D', padding: '12px 16px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+const Header: React.FC<{ email?: string | null; onSignOut?: () => void }> = ({ email, onSignOut }) => (
+  <div style={{ background: '#C49F6D', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
     <BookmarkIcon size={13} style={{ color: '#14110D', opacity: 0.6 }} />
     <span style={{
       fontFamily: 'Geist Mono, monospace',
-      fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.65,
+      fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.65, flex: 1,
     }}>
       RENT ASSISTANT
     </span>
+    {email && onSignOut && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, color: 'rgba(20,17,13,0.6)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {email}
+        </span>
+        <button
+          onClick={onSignOut}
+          style={{
+            fontSize: 10, fontWeight: 600, color: '#14110D',
+            background: '#fff', border: '1px solid rgba(20,17,13,0.2)',
+            borderRadius: 5, padding: '3px 9px', cursor: 'pointer',
+            fontFamily: 'Geist, system-ui, sans-serif', flexShrink: 0,
+          }}
+        >
+          Sign out
+        </button>
+      </div>
+    )}
   </div>
 );
 
@@ -85,19 +103,7 @@ export const Popup: React.FC = () => {
 
   return (
     <div style={containerStyle}>
-      <Header />
-
-      <div style={{ padding: '8px 12px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 11, color: '#3A3530', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
-          {user.email}
-        </div>
-        <button
-          onClick={signOut}
-          style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', color: '#8a8377', fontSize: 11, flexShrink: 0 }}
-        >
-          <LogOut size={11} /> Sign out
-        </button>
-      </div>
+      <Header email={user.email} onSignOut={signOut} />
 
       {currentTabInfo.isListing && currentTabInfo.address && (
         <div style={{ padding: '4px 12px 8px' }}>
@@ -110,7 +116,7 @@ export const Popup: React.FC = () => {
       )}
 
       <div style={{ padding: '0 12px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 12 }}>
           <span style={{
             fontFamily: 'Geist Mono, monospace', fontSize: 9,
             letterSpacing: '0.18em', textTransform: 'uppercase', color: '#8a8377',
