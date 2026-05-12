@@ -47,6 +47,7 @@ export function useExtensionData(address: string | null) {
           rentEstimate: null,
           crimeData: { felony: 18, misdemeanor: 65, violation: 40 },
           safetyScore: null,
+          amenities: null,
           lastUpdated: Date.now()
         });
         setIsLoading(false);

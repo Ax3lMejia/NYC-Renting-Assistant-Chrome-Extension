@@ -9,8 +9,9 @@ interface SettingsPanelProps {
     showPestData: boolean;
     showRentEstimate: boolean;
     showSafety: boolean;
+    showAmenities: boolean;
   };
-  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPestData' | 'showRentEstimate' | 'showSafety') => void;
+  onToggle: (key: 'showComplaints' | 'showViolations' | 'showPestData' | 'showRentEstimate' | 'showSafety' | 'showAmenities') => void;
 }
 
 const options = [
@@ -19,6 +20,7 @@ const options = [
   { key: 'showPestData', label: 'Pest Activity' },
   { key: 'showRentEstimate', label: 'Rent Estimate' },
   { key: 'showSafety', label: 'Safety' },
+  { key: 'showAmenities', label: 'Amenities' },
 ] as const;
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onToggle }) => {

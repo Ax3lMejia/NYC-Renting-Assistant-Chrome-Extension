@@ -10,6 +10,18 @@ export interface CrimeData {
   violation: number;
 }
 
+export interface Amenity {
+  name: string;
+  distanceMeters: number;
+}
+
+export interface AmenityData {
+  grocery: { count: number; nearest: Amenity | null };
+  parks:   { count: number; nearest: Amenity | null };
+  laundry: { count: number; nearest: Amenity | null };
+  subway:  { count: number; nearest: Amenity | null };
+}
+
 export interface BuildingData {
   address: string;
   bbl: string | null;
@@ -30,6 +42,7 @@ export interface BuildingData {
   rentEstimate: number | null;
   crimeData: CrimeData | null;
   safetyScore: number | null;
+  amenities: AmenityData | null;
   lastUpdated: number;
 }
 

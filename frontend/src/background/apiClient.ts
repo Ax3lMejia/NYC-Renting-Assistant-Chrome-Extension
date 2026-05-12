@@ -1,10 +1,12 @@
-import { BuildingData, BedbugReport, ApiError } from '../types/api';
+import { BuildingData, BedbugReport, ApiError, AmenityData } from '../types/api';
 import { RateLimiter } from './rateLimiter';
 import { calculateSafetyScore } from '../utils/neighborhoodSafety';
+import { haversineMeters } from '../utils/haversine';
 
 const GEOCLIENT_DOMAIN = 'api.nyc.gov';
 const AUGRENTED_DOMAIN = 'augrented.com';
 const NYPD_DOMAIN = 'data.cityofnewyork.us';
+const OVERPASS_DOMAIN = 'overpass-api.de';
 
 const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
@@ -16,6 +18,7 @@ const ENDPOINTS = {
   augrentedEcbViolations: 'https://augrented.com/api/nyc/nyc/building/ecb-violations',
   augrentedServiceRequests: 'https://augrented.com/api/nyc/nyc/building/service-requests',
   nypd: 'https://data.cityofnewyork.us/resource/5uac-w243.json',
+  overpass: 'https://overpass-api.de/api/interpreter',
 };
 
 export class ApiClient {
@@ -118,6 +121,7 @@ export class ApiClient {
       rentEstimate: null,
       crimeData: null,
       safetyScore: null,
+      amenities: null,
       lastUpdated: Date.now(),
     };
 
@@ -147,6 +151,7 @@ export class ApiClient {
       ecbResult,
       serviceRequestsResult,
       nypResult,
+      amenitiesResult,
     ] = await Promise.allSettled([
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedSearch}?${searchParams}`)
@@ -175,6 +180,9 @@ export class ApiClient {
               `${ENDPOINTS.nypd}?$where=within_circle(lat_lon,${lat},${lng},400) AND cmplnt_fr_dt >= '${new Date().getFullYear()}-01-01T00:00:00.000'&$limit=1000&$select=law_cat_cd`
             )
           )
+        : Promise.resolve(null),
+      lat !== null && lng !== null
+        ? RateLimiter.enqueue(OVERPASS_DOMAIN, () => this.fetchAmenities(lat, lng))
         : Promise.resolve(null),
     ]);
 
@@ -271,7 +279,69 @@ export class ApiClient {
       errors.push({ source: 'NYPD', message: nypResult.reason?.message || 'Failed to fetch crime data.' });
     }
 
+    // Amenities
+    if (amenitiesResult.status === 'fulfilled' && amenitiesResult.value !== null) {
+      result.amenities = amenitiesResult.value;
+    } else if (amenitiesResult.status === 'rejected') {
+      errors.push({ source: 'Amenities', message: amenitiesResult.reason?.message || 'Failed to fetch amenity data.' });
+    }
+
     return { data: result, errors };
+  }
+
+  private static async fetchAmenities(lat: number, lng: number): Promise<AmenityData> {
+    const query = `[out:json][timeout:25];(node["shop"~"supermarket|grocery|convenience"](around:800,${lat},${lng});node["leisure"="park"](around:800,${lat},${lng});node["shop"~"laundry|dry_cleaning|laundromat"](around:800,${lat},${lng});node["railway"="subway_entrance"](around:800,${lat},${lng}););out;`;
+
+    const response = await fetch(ENDPOINTS.overpass, {
+      method: 'POST',
+      body: new URLSearchParams({ data: query }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Overpass HTTP ${response.status}`);
+    }
+
+    const json = await response.json();
+
+    // Overpass signals server-side timeout/errors via a remark field on HTTP 200
+    if (typeof json.remark === 'string' && json.remark.includes('runtime error')) {
+      throw new Error(`Overpass query failed: ${json.remark}`);
+    }
+
+    const elements: any[] = json.elements ?? [];
+
+    const result: AmenityData = {
+      grocery: { count: 0, nearest: null },
+      parks:   { count: 0, nearest: null },
+      laundry: { count: 0, nearest: null },
+      subway:  { count: 0, nearest: null },
+    };
+
+    for (const el of elements) {
+      const elLat: number | undefined = el.lat;
+      const elLng: number | undefined = el.lon;
+      if (elLat == null || elLng == null) continue;
+
+      const name: string = el.tags?.name ?? 'Unnamed';
+      const dist = haversineMeters(lat, lng, elLat, elLng);
+      const tags = el.tags ?? {};
+
+      let category: keyof AmenityData | null = null;
+      if (/supermarket|grocery|convenience/i.test(tags.shop ?? '')) category = 'grocery';
+      else if (tags.leisure === 'park') category = 'parks';
+      else if (/laundry|dry_cleaning|laundromat/i.test(tags.shop ?? '')) category = 'laundry';
+      else if (tags.railway === 'subway_entrance') category = 'subway';
+
+      if (!category) continue;
+
+      result[category].count++;
+      const current = result[category].nearest;
+      if (current === null || dist < current.distanceMeters) {
+        result[category].nearest = { name, distanceMeters: Math.round(dist) };
+      }
+    }
+
+    return result;
   }
 
   private static toArray(value: any): any[] {

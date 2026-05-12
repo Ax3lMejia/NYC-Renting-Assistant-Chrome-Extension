@@ -4,6 +4,7 @@ import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
 import { PestSummary } from './components/features/PestSummary';
 import { SafetySummary } from './components/features/SafetySummary';
+import { AmenitiesSummary } from './components/features/AmenitiesSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
 import { calculateBuildingGrade } from './utils/buildingGrade';
@@ -26,6 +27,7 @@ function App({ scrapedAddress, scrapedPrice }: AppProps) {
     showPestData: true,
     showRentEstimate: true,
     showSafety: true,
+    showAmenities: true,
   });
 
   const handleToggle = (key: keyof typeof settings) => {
@@ -88,6 +90,13 @@ function App({ scrapedAddress, scrapedPrice }: AppProps) {
       {settings.showSafety && (
         <SafetySummary
           crimeData={data?.crimeData ?? null}
+          isLoading={isLoading}
+        />
+      )}
+
+      {settings.showAmenities && (
+        <AmenitiesSummary
+          amenities={data?.amenities ?? null}
           isLoading={isLoading}
         />
       )}
