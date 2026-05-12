@@ -15,9 +15,7 @@
     "https://*.apartments.com/*",
     "https://api.nyc.gov/*",
     "https://augrented.com/*",
-    "https://overpass-api.de/*",
-    "https://overpass.private.coffee/*",
-    "https://overpass.openstreetmap.ru/*"
+    "https://places.googleapis.com/*"
   ],
   "action": {
     "default_popup": "index.html"

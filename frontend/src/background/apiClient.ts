@@ -6,7 +6,7 @@ import { haversineMeters } from '../utils/haversine';
 const GEOCLIENT_DOMAIN = 'api.nyc.gov';
 const AUGRENTED_DOMAIN = 'augrented.com';
 const NYPD_DOMAIN = 'data.cityofnewyork.us';
-const OVERPASS_DOMAIN = 'overpass-api.de';
+const GOOGLE_DOMAIN = 'places.googleapis.com';
 
 const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
@@ -18,13 +18,23 @@ const ENDPOINTS = {
   augrentedEcbViolations: 'https://augrented.com/api/nyc/nyc/building/ecb-violations',
   augrentedServiceRequests: 'https://augrented.com/api/nyc/nyc/building/service-requests',
   nypd: 'https://data.cityofnewyork.us/resource/5uac-w243.json',
-  overpass: 'https://overpass-api.de/api/interpreter',
+  googleNearbySearch: 'https://places.googleapis.com/v1/places:searchNearby',
+};
+
+// google places type -> AmenityData key
+const GOOGLE_TYPE_MAP: Record<string, keyof AmenityData> = {
+  grocery_store:     'grocery',
+  supermarket:       'grocery',
+  convenience_store: 'grocery',
+  park:              'parks',
+  laundry:           'laundry',
+  subway_station:    'subway',
 };
 
 export class ApiClient {
-  // Parses a full address string into components for the Geoclient V2 address endpoint.
-  // Input:  "441 63rd St APT 1R, Brooklyn, NY 11220"
-  // Output: { houseNumber: "441", street: "63rd St", borough: "Brooklyn", zip: "11220" }
+  // parses a full address string into components for the Geoclient V2 address endpoint.
+  // input:  "441 63rd St APT 1R, Brooklyn, NY 11220"
+  // output: { houseNumber: "441", street: "63rd St", borough: "Brooklyn", zip: "11220" }
   private static parseAddressComponents(address: string): {
     houseNumber: string;
     street: string;
@@ -67,7 +77,7 @@ export class ApiClient {
     return { houseNumber, street, borough, zip };
   }
 
-  // Resolves a street address to a NYC BBL and BIN using the NYC Geoclient V2 API.
+  // resolves a street address to a NYC BBL and BIN using the NYC Geoclient V2 API.
   private static async geocodeAddress(address: string): Promise<{ bbl: string; bin: string; lat: number | null; lng: number | null } | null> {
     const components = this.parseAddressComponents(address);
     if (!components) return null;
@@ -182,7 +192,7 @@ export class ApiClient {
           )
         : Promise.resolve(null),
       lat !== null && lng !== null
-        ? RateLimiter.enqueue(OVERPASS_DOMAIN, () => this.fetchAmenities(lat, lng))
+        ? RateLimiter.enqueue(GOOGLE_DOMAIN, () => this.fetchAmenities(lat, lng))
         : Promise.resolve(null),
     ]);
 
@@ -290,25 +300,34 @@ export class ApiClient {
   }
 
   private static async fetchAmenities(lat: number, lng: number): Promise<AmenityData> {
-    const query = `[out:json][timeout:25];(node["shop"~"supermarket|grocery|convenience"](around:800,${lat},${lng});node["leisure"="park"](around:800,${lat},${lng});node["shop"~"laundry|dry_cleaning|laundromat"](around:800,${lat},${lng});node["railway"="subway_entrance"](around:800,${lat},${lng}););out;`;
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+    if (!apiKey) throw new Error('VITE_GOOGLE_API_KEY not set');
 
-    const response = await fetch(ENDPOINTS.overpass, {
+    const response = await fetch(ENDPOINTS.googleNearbySearch, {
       method: 'POST',
-      body: new URLSearchParams({ data: query }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.displayName,places.location,places.types',
+      },
+      body: JSON.stringify({
+        includedTypes: Object.keys(GOOGLE_TYPE_MAP),
+        maxResultCount: 20,
+        locationRestriction: {
+          circle: {
+            center: { latitude: lat, longitude: lng },
+            radius: 800.0,
+          },
+        },
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Overpass HTTP ${response.status}`);
+      throw new Error(`Google Places HTTP ${response.status}`);
     }
 
     const json = await response.json();
-
-    // Overpass signals server-side timeout/errors via a remark field on HTTP 200
-    if (typeof json.remark === 'string' && json.remark.includes('runtime error')) {
-      throw new Error(`Overpass query failed: ${json.remark}`);
-    }
-
-    const elements: any[] = json.elements ?? [];
+    const places: any[] = json.places ?? [];
 
     const result: AmenityData = {
       grocery: { count: 0, nearest: null },
@@ -317,21 +336,19 @@ export class ApiClient {
       subway:  { count: 0, nearest: null },
     };
 
-    for (const el of elements) {
-      const elLat: number | undefined = el.lat;
-      const elLng: number | undefined = el.lon;
-      if (elLat == null || elLng == null) continue;
+    for (const place of places) {
+      const name: string = place.displayName?.text ?? 'Unnamed';
+      const placeLat: number = place.location?.latitude;
+      const placeLng: number = place.location?.longitude;
+      if (placeLat == null || placeLng == null) continue;
 
-      const name: string = el.tags?.name ?? 'Unnamed';
-      const dist = haversineMeters(lat, lng, elLat, elLng);
-      const tags = el.tags ?? {};
+      const dist = haversineMeters(lat, lng, placeLat, placeLng);
+      const types: string[] = place.types ?? [];
 
       let category: keyof AmenityData | null = null;
-      if (/supermarket|grocery|convenience/i.test(tags.shop ?? '')) category = 'grocery';
-      else if (tags.leisure === 'park') category = 'parks';
-      else if (/laundry|dry_cleaning|laundromat/i.test(tags.shop ?? '')) category = 'laundry';
-      else if (tags.railway === 'subway_entrance') category = 'subway';
-
+      for (const t of types) {
+        if (GOOGLE_TYPE_MAP[t]) { category = GOOGLE_TYPE_MAP[t]; break; }
+      }
       if (!category) continue;
 
       result[category].count++;
