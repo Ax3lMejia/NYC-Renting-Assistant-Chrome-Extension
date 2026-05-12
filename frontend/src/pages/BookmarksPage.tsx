@@ -152,7 +152,7 @@ const BookmarkCard: React.FC<{
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {bd.complaints !== null && <StatBadge label="HPD" value={bd.complaints} warn={bd.complaints > 15} />}
             {bd.violations !== null && <StatBadge label="Violations" value={bd.violations} warn={bd.violations > 8} />}
-            {bd.bedbugReports !== null && <StatBadge label="Bedbugs" value={bd.bedbugReports} warn={bd.bedbugReports > 0} />}
+            {bd.bedbugReports !== null && <StatBadge label="Bedbug Reports" value={bd.bedbugReports} warn={bd.bedbugReports > 0} />}
             {bd.safetyScore !== null && <StatBadge label="Safety" value={`${bd.safetyScore}/100`} />}
           </div>
         ) : (
@@ -363,8 +363,8 @@ export const BookmarksPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: compareMode ? 0 : 28 }}>
           <div>
             <div style={{
-              fontFamily: 'Instrument Serif, Georgia, serif',
-              fontSize: 30, fontStyle: 'italic', color: '#14110D',
+              fontFamily: 'Geist, system-ui, sans-serif',
+              fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#14110D',
             }}>
               My Bookmarks
             </div>
