@@ -33,8 +33,10 @@ export function useAuth() {
       }
     };
 
-    chrome.storage.local.onChanged.addListener(storageListener);
-    return () => chrome.storage.local.onChanged.removeListener(storageListener);
+    if (chrome?.storage?.local) {
+      chrome.storage.local.onChanged.addListener(storageListener);
+      return () => chrome.storage.local.onChanged.removeListener(storageListener);
+    }
   }, []);
 
   const signInEmail = useCallback(async (email: string, password: string): Promise<string | null> => {
@@ -98,8 +100,49 @@ export function useAuth() {
   }, []);
 
   const signOut = useCallback((): void => {
-    chrome.runtime.sendMessage({ type: 'SIGN_OUT' });
+    chrome?.runtime?.sendMessage({ type: 'SIGN_OUT' });
   }, []);
 
-  return { user, isLoading, error, signInEmail, signUp, signInGoogle, signOut };
+  const resetPassword = useCallback(async (email: string): Promise<string | null> => {
+    setError(null);
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: 'RESET_PASSWORD', email }, (response: AuthResponse) => {
+        if (chrome.runtime.lastError) {
+          const msg = chrome.runtime.lastError.message ?? 'Connection error';
+          setError(msg);
+          resolve(msg);
+          return;
+        }
+        if (response.status === 'error') {
+          setError(response.message ?? 'Password reset failed');
+          resolve(response.message ?? 'Password reset failed');
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }, []);
+
+  const deleteAccount = useCallback(async (): Promise<string | null> => {
+    setError(null);
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: 'DELETE_ACCOUNT' }, (response: AuthResponse) => {
+        if (chrome.runtime.lastError) {
+          const msg = chrome.runtime.lastError.message ?? 'Connection error';
+          setError(msg);
+          resolve(msg);
+          return;
+        }
+        if (response.status === 'error') {
+          setError(response.message ?? 'Account deletion failed');
+          resolve(response.message ?? 'Account deletion failed');
+        } else {
+          setUser(null);
+          resolve(null);
+        }
+      });
+    });
+  }, []);
+
+  return { user, isLoading, error, signInEmail, signUp, signInGoogle, signOut, resetPassword, deleteAccount };
 }

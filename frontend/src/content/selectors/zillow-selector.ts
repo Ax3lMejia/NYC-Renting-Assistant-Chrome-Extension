@@ -1,3 +1,5 @@
+import { parsePriceText } from '../../utils/priceParser';
+
 export function isZillowListingPage(): boolean {
   return window.location.hostname.includes('zillow.com');
 }
@@ -43,4 +45,23 @@ function cleanAddress(raw: string): string {
     .replace(/\s*[|\-–—]\s*(Zillow|StreetEasy|Apartments\.com|Trulia).*$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+export function getZillowPrice(): number | null {
+  const selectors = [
+    '[data-testid="price"]',
+    'span[class*="Price"]',
+    '[class*="price-container"]',
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const text = el?.textContent?.trim();
+    if (text) {
+      const price = parsePriceText(text);
+      if (price) return price;
+    }
+  }
+
+  return null;
 }

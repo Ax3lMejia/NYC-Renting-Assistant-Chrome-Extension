@@ -16,6 +16,7 @@ interface SidebarProps {
   isLoading: boolean;
   grade: GradeResult | null;
   buildingData?: BuildingData | null;
+  listedPrice?: number | null;
   listingUrl?: string;
   children: React.ReactNode;
 }
@@ -27,6 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isLoading,
   grade,
   buildingData,
+  listedPrice,
   listingUrl,
   children,
 }) => {
@@ -76,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     address={address}
                     listingUrl={listingUrl ?? window.location.href}
                     buildingData={buildingData ?? null}
+                    listedPrice={listedPrice ?? null}
                   />
                 ) : (
                   <button

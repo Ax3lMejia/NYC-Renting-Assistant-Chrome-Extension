@@ -1,3 +1,5 @@
+import { parsePriceText } from '../../utils/priceParser';
+
 export function isStreetEasyListingPage(): boolean {
     const path = window.location.pathname;
     return window.location.hostname.includes('streeteasy.com') &&
@@ -90,3 +92,24 @@ export function isStreetEasyListingPage(): boolean {
       .replace(/\s+(?:apt|apartment|unit|suite|ste|fl|floor)\s+[a-z0-9-]+\b.*$/i, '')
       .trim();
   }
+
+export function getStreetEasyPrice(): number | null {
+  const selectors = [
+    '[data-testid="listing-price"]',
+    '[data-testid="price"]',
+    '.price',
+    '[class*="listingPrice"]',
+    '[class*="price"]',
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const text = el?.textContent?.trim();
+    if (text) {
+      const price = parsePriceText(text);
+      if (price) return price;
+    }
+  }
+
+  return null;
+}

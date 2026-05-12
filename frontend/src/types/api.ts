@@ -10,6 +10,18 @@ export interface CrimeData {
   violation: number;
 }
 
+export interface Amenity {
+  name: string;
+  distanceMeters: number;
+}
+
+export interface AmenityData {
+  grocery: { count: number; nearest: Amenity | null };
+  parks:   { count: number; nearest: Amenity | null };
+  laundry: { count: number; nearest: Amenity | null };
+  subway:  { count: number; nearest: Amenity | null };
+}
+
 export interface BuildingData {
   address: string;
   bbl: string | null;
@@ -30,6 +42,7 @@ export interface BuildingData {
   rentEstimate: number | null;
   crimeData: CrimeData | null;
   safetyScore: number | null;
+  amenities: AmenityData | null;
   lastUpdated: number;
 }
 
@@ -60,6 +73,7 @@ export interface Bookmark {
   listing_url: string;
   building_data: BuildingData | null;
   notes: string | null;
+  listed_price: number | null;
   created_at: string;
 }
 
@@ -80,7 +94,9 @@ export type ExtensionMessage =
   | { type: 'SIGN_IN_GOOGLE' }
   | { type: 'SIGN_OUT' }
   | { type: 'GET_AUTH_STATE' }
-  | { type: 'ADD_BOOKMARK'; address: string; listingUrl: string; buildingData: BuildingData | null; notes?: string }
+  | { type: 'RESET_PASSWORD'; email: string }
+  | { type: 'DELETE_ACCOUNT' }
+  | { type: 'ADD_BOOKMARK'; address: string; listingUrl: string; buildingData: BuildingData | null; notes?: string; listedPrice?: number | null }
   | { type: 'REMOVE_BOOKMARK'; bookmarkId: string }
   | { type: 'GET_BOOKMARKS' }
   | { type: 'UPDATE_BOOKMARK_NOTES'; bookmarkId: string; notes: string };

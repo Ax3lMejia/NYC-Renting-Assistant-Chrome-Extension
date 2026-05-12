@@ -1,12 +1,19 @@
 import { getSupabaseClient } from './supabaseClient';
 import { Bookmark, BookmarkResponse, BuildingData } from '../types/api';
 
+const BOOKMARKS_UPDATED_KEY = 'NYC_RA_BOOKMARKS_UPDATED';
+
+function notifyBookmarksChanged() {
+  chrome.storage.local.set({ [BOOKMARKS_UPDATED_KEY]: Date.now() });
+}
+
 export class BookmarkHandler {
   static async addBookmark(
     address: string,
     listingUrl: string,
     buildingData: BuildingData | null,
-    notes?: string
+    notes?: string,
+    listedPrice?: number | null
   ): Promise<BookmarkResponse> {
     try {
       const supabase = await getSupabaseClient();
@@ -21,11 +28,13 @@ export class BookmarkHandler {
           listing_url: listingUrl,
           building_data: buildingData,
           notes: notes ?? null,
+          listed_price: listedPrice ?? null,
         })
         .select()
         .single();
 
       if (error) return { status: 'error', message: error.message };
+      notifyBookmarksChanged();
       return { status: 'success', bookmark: data as Bookmark };
     } catch (err: any) {
       return { status: 'error', message: err.message || 'Failed to add bookmark' };
@@ -37,6 +46,7 @@ export class BookmarkHandler {
       const supabase = await getSupabaseClient();
       const { error } = await supabase.from('bookmarks').delete().eq('id', bookmarkId);
       if (error) return { status: 'error', message: error.message };
+      notifyBookmarksChanged();
       return { status: 'success' };
     } catch (err: any) {
       return { status: 'error', message: err.message || 'Failed to remove bookmark' };

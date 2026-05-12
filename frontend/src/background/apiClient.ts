@@ -1,10 +1,12 @@
-import { BuildingData, BedbugReport, ApiError } from '../types/api';
+import { BuildingData, BedbugReport, ApiError, AmenityData } from '../types/api';
 import { RateLimiter } from './rateLimiter';
 import { calculateSafetyScore } from '../utils/neighborhoodSafety';
+import { haversineMeters } from '../utils/haversine';
 
 const GEOCLIENT_DOMAIN = 'api.nyc.gov';
 const AUGRENTED_DOMAIN = 'augrented.com';
 const NYPD_DOMAIN = 'data.cityofnewyork.us';
+const GOOGLE_DOMAIN = 'places.googleapis.com';
 
 const ENDPOINTS = {
   geoclientAddress: 'https://api.nyc.gov/geoclient/v2/address',
@@ -16,12 +18,23 @@ const ENDPOINTS = {
   augrentedEcbViolations: 'https://augrented.com/api/nyc/nyc/building/ecb-violations',
   augrentedServiceRequests: 'https://augrented.com/api/nyc/nyc/building/service-requests',
   nypd: 'https://data.cityofnewyork.us/resource/5uac-w243.json',
+  googleNearbySearch: 'https://places.googleapis.com/v1/places:searchNearby',
+};
+
+// google places type -> AmenityData key
+const GOOGLE_TYPE_MAP: Record<string, keyof AmenityData> = {
+  grocery_store:     'grocery',
+  supermarket:       'grocery',
+  convenience_store: 'grocery',
+  park:              'parks',
+  laundry:           'laundry',
+  subway_station:    'subway',
 };
 
 export class ApiClient {
-  // Parses a full address string into components for the Geoclient V2 address endpoint.
-  // Input:  "441 63rd St APT 1R, Brooklyn, NY 11220"
-  // Output: { houseNumber: "441", street: "63rd St", borough: "Brooklyn", zip: "11220" }
+  // parses a full address string into components for the Geoclient V2 address endpoint.
+  // input:  "441 63rd St APT 1R, Brooklyn, NY 11220"
+  // output: { houseNumber: "441", street: "63rd St", borough: "Brooklyn", zip: "11220" }
   private static parseAddressComponents(address: string): {
     houseNumber: string;
     street: string;
@@ -64,7 +77,7 @@ export class ApiClient {
     return { houseNumber, street, borough, zip };
   }
 
-  // Resolves a street address to a NYC BBL and BIN using the NYC Geoclient V2 API.
+  // resolves a street address to a NYC BBL and BIN using the NYC Geoclient V2 API.
   private static async geocodeAddress(address: string): Promise<{ bbl: string; bin: string; lat: number | null; lng: number | null } | null> {
     const components = this.parseAddressComponents(address);
     if (!components) return null;
@@ -118,6 +131,7 @@ export class ApiClient {
       rentEstimate: null,
       crimeData: null,
       safetyScore: null,
+      amenities: null,
       lastUpdated: Date.now(),
     };
 
@@ -147,6 +161,7 @@ export class ApiClient {
       ecbResult,
       serviceRequestsResult,
       nypResult,
+      amenitiesResult,
     ] = await Promise.allSettled([
       RateLimiter.enqueue(AUGRENTED_DOMAIN, () =>
         this.fetchJson(`${ENDPOINTS.augrentedSearch}?${searchParams}`)
@@ -175,6 +190,9 @@ export class ApiClient {
               `${ENDPOINTS.nypd}?$where=within_circle(lat_lon,${lat},${lng},400) AND cmplnt_fr_dt >= '${new Date().getFullYear()}-01-01T00:00:00.000'&$limit=1000&$select=law_cat_cd`
             )
           )
+        : Promise.resolve(null),
+      lat !== null && lng !== null
+        ? RateLimiter.enqueue(GOOGLE_DOMAIN, () => this.fetchAmenities(lat, lng))
         : Promise.resolve(null),
     ]);
 
@@ -271,7 +289,76 @@ export class ApiClient {
       errors.push({ source: 'NYPD', message: nypResult.reason?.message || 'Failed to fetch crime data.' });
     }
 
+    // Amenities
+    if (amenitiesResult.status === 'fulfilled' && amenitiesResult.value !== null) {
+      result.amenities = amenitiesResult.value;
+    } else if (amenitiesResult.status === 'rejected') {
+      errors.push({ source: 'Amenities', message: amenitiesResult.reason?.message || 'Failed to fetch amenity data.' });
+    }
+
     return { data: result, errors };
+  }
+
+  private static async fetchAmenities(lat: number, lng: number): Promise<AmenityData> {
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+    if (!apiKey) throw new Error('VITE_GOOGLE_API_KEY not set');
+
+    const response = await fetch(ENDPOINTS.googleNearbySearch, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.displayName,places.location,places.types',
+      },
+      body: JSON.stringify({
+        includedTypes: Object.keys(GOOGLE_TYPE_MAP),
+        maxResultCount: 20,
+        locationRestriction: {
+          circle: {
+            center: { latitude: lat, longitude: lng },
+            radius: 800.0,
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google Places HTTP ${response.status}`);
+    }
+
+    const json = await response.json();
+    const places: any[] = json.places ?? [];
+
+    const result: AmenityData = {
+      grocery: { count: 0, nearest: null },
+      parks:   { count: 0, nearest: null },
+      laundry: { count: 0, nearest: null },
+      subway:  { count: 0, nearest: null },
+    };
+
+    for (const place of places) {
+      const name: string = place.displayName?.text ?? 'Unnamed';
+      const placeLat: number = place.location?.latitude;
+      const placeLng: number = place.location?.longitude;
+      if (placeLat == null || placeLng == null) continue;
+
+      const dist = haversineMeters(lat, lng, placeLat, placeLng);
+      const types: string[] = place.types ?? [];
+
+      let category: keyof AmenityData | null = null;
+      for (const t of types) {
+        if (GOOGLE_TYPE_MAP[t]) { category = GOOGLE_TYPE_MAP[t]; break; }
+      }
+      if (!category) continue;
+
+      result[category].count++;
+      const current = result[category].nearest;
+      if (current === null || dist < current.distanceMeters) {
+        result[category].nearest = { name, distanceMeters: Math.round(dist) };
+      }
+    }
+
+    return result;
   }
 
   private static toArray(value: any): any[] {

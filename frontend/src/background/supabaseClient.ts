@@ -33,6 +33,16 @@ export async function getSupabaseClient(): Promise<SupabaseClient> {
   return _client;
 }
 
+export async function refreshStoredSession(): Promise<void> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.auth.refreshSession();
+  if (error) {
+    console.warn('[Supabase] Session refresh failed:', error.message);
+    return;
+  }
+  await storeSession(data.session);
+}
+
 export async function storeSession(session: Session | null): Promise<void> {
   if (session) {
     await chrome.storage.local.set({

@@ -4,15 +4,17 @@ import { ComplaintSummary } from './components/features/ComplaintSummary';
 import { ViolationSummary } from './components/features/ViolationSummary';
 import { PestSummary } from './components/features/PestSummary';
 import { SafetySummary } from './components/features/SafetySummary';
+import { AmenitiesSummary } from './components/features/AmenitiesSummary';
 import { SettingsPanel } from './components/features/SettingsPanel';
 import { useExtensionData } from './hooks/useExtensionData';
 import { calculateBuildingGrade } from './utils/buildingGrade';
 
 type AppProps = {
   scrapedAddress: string | null;
+  scrapedPrice: number | null;
 };
 
-function App({ scrapedAddress }: AppProps) {
+function App({ scrapedAddress, scrapedPrice }: AppProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const address = scrapedAddress;
@@ -25,6 +27,7 @@ function App({ scrapedAddress }: AppProps) {
     showPestData: true,
     showRentEstimate: true,
     showSafety: true,
+    showAmenities: true,
   });
 
   const handleToggle = (key: keyof typeof settings) => {
@@ -43,6 +46,7 @@ function App({ scrapedAddress }: AppProps) {
       isLoading={isLoading}
       grade={grade}
       buildingData={data}
+      listedPrice={scrapedPrice}
       listingUrl={typeof window !== 'undefined' ? window.location.href : undefined}
     >
       {showSettings && (
@@ -86,6 +90,13 @@ function App({ scrapedAddress }: AppProps) {
       {settings.showSafety && (
         <SafetySummary
           crimeData={data?.crimeData ?? null}
+          isLoading={isLoading}
+        />
+      )}
+
+      {settings.showAmenities && (
+        <AmenitiesSummary
+          amenities={data?.amenities ?? null}
           isLoading={isLoading}
         />
       )}

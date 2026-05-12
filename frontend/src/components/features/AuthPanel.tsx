@@ -61,17 +61,25 @@ const btnGoogle: React.CSSProperties = {
 };
 
 export const AuthPanel: React.FC<AuthPanelProps> = ({ onSuccess, compact = false }) => {
-  const { signInEmail, signUp, signInGoogle, error } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const { signInEmail, signUp, signInGoogle, resetPassword, error } = useAuth();
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
     setIsSubmitting(true);
+    if (mode === 'reset') {
+      const err = await resetPassword(email);
+      setIsSubmitting(false);
+      if (!err) setResetSent(true);
+      else setLocalError(err);
+      return;
+    }
     const err = mode === 'signin'
       ? await signInEmail(email, password)
       : await signUp(email, password);
@@ -89,6 +97,12 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onSuccess, compact = false
     else setLocalError(err);
   };
 
+  const switchMode = (next: 'signin' | 'signup' | 'reset') => {
+    setMode(next);
+    setLocalError(null);
+    setResetSent(false);
+  };
+
   return (
     <div style={{
       background: '#FFFFFF',
@@ -102,74 +116,117 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onSuccess, compact = false
             fontFamily: 'Instrument Serif, Georgia, serif',
             fontSize: 20, fontStyle: 'italic', color: '#14110D',
           }}>
-            {mode === 'signin' ? 'Welcome back' : 'Create account'}
+            {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create account' : 'Reset password'}
           </div>
-          <div style={{ fontSize: 11, color: '#3A3530', marginTop: 4 }}>
-            Save listings and track promising apartments
-          </div>
+          {mode !== 'reset' && (
+            <div style={{ fontSize: 11, color: '#3A3530', marginTop: 4 }}>
+              Save listings and track promising apartments
+            </div>
+          )}
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-          style={inputStyle}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-          style={{ ...inputStyle, marginBottom: 10 }}
-        />
-
-        {(localError || error) && (
-          <div style={{ fontSize: 11, color: '#E84A1F', marginBottom: 8, lineHeight: 1.3 }}>
-            {localError || error}
+      {mode === 'reset' && resetSent ? (
+        <div style={{ textAlign: 'center', padding: '12px 0' }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>📬</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#14110D', marginBottom: 6 }}>Check your inbox</div>
+          <div style={{ fontSize: 11, color: '#8a8377', lineHeight: 1.5, marginBottom: 14 }}>
+            A reset link was sent to <strong>{email}</strong>. Click it in your browser to set a new password, then sign in here.
           </div>
-        )}
+          <button
+            onClick={() => switchMode('signin')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#8a8377', fontFamily: 'Geist, system-ui, sans-serif' }}
+          >
+            ← Back to sign in
+          </button>
+        </div>
+      ) : (
+        <>
+          <form onSubmit={handleSubmit}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              style={inputStyle}
+            />
+            {mode !== 'reset' && (
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={{ ...inputStyle, marginBottom: mode === 'signin' ? 4 : 10 }}
+              />
+            )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{ ...btnPrimary, opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
-        >
-          {isSubmitting ? 'Loading…' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
-        </button>
-      </form>
+            {mode === 'signin' && (
+              <div style={{ textAlign: 'right', marginBottom: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => switchMode('reset')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#8a8377', fontFamily: 'Geist, system-ui, sans-serif' }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(20,17,13,0.12)' }} />
-        <span style={{ fontSize: 10, color: '#8a8377', fontFamily: 'Geist Mono, monospace', letterSpacing: '0.1em' }}>OR</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(20,17,13,0.12)' }} />
-      </div>
+            {(localError || error) && (
+              <div style={{ fontSize: 11, color: '#E84A1F', marginBottom: 8, lineHeight: 1.3 }}>
+                {localError || error}
+              </div>
+            )}
 
-      <button
-        onClick={handleGoogle}
-        disabled={isSubmitting}
-        style={{ ...btnGoogle, opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
-      >
-        <GoogleIcon />
-        Continue with Google
-      </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{ ...btnPrimary, opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+            >
+              {isSubmitting ? 'Loading…' : mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Sign Up' : 'Send reset link'}
+            </button>
+          </form>
 
-      <div style={{ textAlign: 'center', marginTop: 10 }}>
-        <button
-          onClick={() => { setMode(m => m === 'signin' ? 'signup' : 'signin'); setLocalError(null); }}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 11, color: '#8a8377',
-            fontFamily: 'Geist, system-ui, sans-serif',
-          }}
-        >
-          {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-        </button>
-      </div>
+          {mode !== 'reset' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(20,17,13,0.12)' }} />
+                <span style={{ fontSize: 10, color: '#8a8377', fontFamily: 'Geist Mono, monospace', letterSpacing: '0.1em' }}>OR</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(20,17,13,0.12)' }} />
+              </div>
+
+              <button
+                onClick={handleGoogle}
+                disabled={isSubmitting}
+                style={{ ...btnGoogle, opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+              >
+                <GoogleIcon />
+                Continue with Google
+              </button>
+            </>
+          )}
+
+          <div style={{ textAlign: 'center', marginTop: 10 }}>
+            {mode === 'reset' ? (
+              <button
+                onClick={() => switchMode('signin')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#8a8377', fontFamily: 'Geist, system-ui, sans-serif' }}
+              >
+                ← Back to sign in
+              </button>
+            ) : (
+              <button
+                onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#8a8377', fontFamily: 'Geist, system-ui, sans-serif' }}
+              >
+                {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

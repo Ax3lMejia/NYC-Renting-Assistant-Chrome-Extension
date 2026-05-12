@@ -22,7 +22,7 @@ export class RateLimiter {
             this.processNext(domain);
             return;
           } catch (error: any) {
-            if (error?.status === 429 && retries < maxRetries) {
+            if ([429, 503].includes(error?.status) && retries < maxRetries) {
               console.warn(`Rate limit hit for ${domain}. Retrying in ${delayMs}ms...`);
               await new Promise(res => setTimeout(res, delayMs));
               delayMs *= 2; // exponential backoff

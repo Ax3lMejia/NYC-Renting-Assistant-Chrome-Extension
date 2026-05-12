@@ -1,3 +1,5 @@
+import { parsePriceText } from '../../utils/priceParser';
+
 export function isApartmentsListingPage(): boolean {
     if (!window.location.hostname.includes('apartments.com')) return false;
     // search result pages: /new-york-ny/ or /new-york-ny/1/?... (1-2 segments, numeric page suffix)
@@ -159,3 +161,62 @@ export function isApartmentsListingPage(): boolean {
       .replace(/\s+/g, ' ')
       .trim();
   }
+
+export function getApartmentsPrice(): number | null {
+  // JSON-LD is the most reliable — apartments.com embeds schema.org structured data
+  const ldPrice = getApartmentsPriceFromJsonLd();
+  if (ldPrice) return ldPrice;
+
+  // Targeted DOM selectors — only query direct text nodes to avoid grabbing unrelated child text
+  const selectors = [
+    '.rentInfoDetail',
+    '.js-rateSection',
+    '.rentRangeDetail',
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const text = el?.textContent?.trim();
+    if (text) {
+      const price = parsePriceText(text);
+      if (price) return price;
+    }
+  }
+
+  return null;
+}
+
+function getApartmentsPriceFromJsonLd(): number | null {
+  const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+  for (const script of scripts) {
+    const raw = script.textContent?.trim();
+    if (!raw) continue;
+    try {
+      const data = JSON.parse(raw);
+      const nodes = flattenJsonNodes(data);
+      for (const node of nodes) {
+        // schema.org offers (most specific)
+        const offers = node.offers;
+        if (offers) {
+          const offerList = Array.isArray(offers) ? offers : [offers];
+          for (const offer of offerList) {
+            if (typeof offer?.price === 'number' && offer.price > 0) return offer.price;
+            if (typeof offer?.lowPrice === 'number' && offer.lowPrice > 0) return offer.lowPrice;
+            if (typeof offer?.price === 'string') {
+              const p = parsePriceText(offer.price);
+              if (p) return p;
+            }
+          }
+        }
+        // priceRange string like "$1,500 - $2,800"
+        if (typeof node.priceRange === 'string') {
+          const p = parsePriceText(node.priceRange);
+          if (p) return p;
+        }
+      }
+    } catch {
+      // ignore malformed JSON-LD
+    }
+  }
+  return null;
+}
