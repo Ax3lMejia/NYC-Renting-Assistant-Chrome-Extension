@@ -88,6 +88,13 @@ function watchForPageChanges() {
   let debounceTimeout: any = null;
 
   const checkAndUpdate = () => {
+    // Re-init if SPA navigation removed our container from the DOM
+    if (!document.getElementById(rootId)) {
+      root = null;
+      shadowWrapperRef = null;
+      init();
+    }
+
     const newAddress = detectAddress();
     if (newAddress !== currentAddress) {
       currentAddress = newAddress;
@@ -102,19 +109,47 @@ function watchForPageChanges() {
     }
   };
 
+  const onNavigate = () => {
+    currentUrl = window.location.href;
+    // Listing content loads async — retry at increasing intervals
+    setTimeout(checkAndUpdate, 500);
+    setTimeout(checkAndUpdate, 1500);
+    setTimeout(checkAndUpdate, 3000);
+    setTimeout(checkAndUpdate, 5000);
+  };
+
+  // Intercept pushState/replaceState for immediate SPA navigation detection
+  const origPushState = history.pushState.bind(history);
+  history.pushState = function (...args: Parameters<typeof history.pushState>) {
+    origPushState(...args);
+    onNavigate();
+  };
+
+  const origReplaceState = history.replaceState.bind(history);
+  history.replaceState = function (...args: Parameters<typeof history.replaceState>) {
+    origReplaceState(...args);
+    onNavigate();
+  };
+
+  window.addEventListener('popstate', onNavigate);
+
   const observer = new MutationObserver(() => {
     if (debounceTimeout) clearTimeout(debounceTimeout);
-    debounceTimeout = setTimeout(checkAndUpdate, 500);
+    debounceTimeout = setTimeout(checkAndUpdate, 300);
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Observe documentElement so we catch body replacement during SPA navigation
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  setInterval(() => {
-    if (window.location.href !== currentUrl) {
-      currentUrl = window.location.href;
-      checkAndUpdate();
+  // Poll on initial load — Zillow renders content via JS after DOMContentLoaded
+  let initRetries = 0;
+  const initPoll = setInterval(() => {
+    if (initRetries++ >= 8 || currentAddress !== null) {
+      clearInterval(initPoll);
+      return;
     }
-  }, 1000);
+    checkAndUpdate();
+  }, 500);
 }
 
 const supportedDomains = ['zillow.com', 'streeteasy.com', 'apartments.com'];
